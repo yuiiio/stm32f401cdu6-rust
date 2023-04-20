@@ -35,3 +35,7 @@ version = "0.3.1"
 
 [dependencies.panic-semihosting]
 version = "0.6.0"
+
+[dependencies.stm32f4]
+features = ["stm32f401", "rt"]
+version = "0.15.0"
