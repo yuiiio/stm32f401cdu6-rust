@@ -41,7 +41,7 @@ fn main() -> ! {
     }
 
     // フラッシュ読み出し遅延の変更
-    peri.FLASH.acr.modify(|_,w| unsafe {w.latency().bits(1u8)});
+    peri.FLASH.acr.modify(|_,w| w.latency().bits(1u8));
     // システムクロックをPLLに切り替え
     peri.RCC.cfgr.modify(|_,w| w.sw().pll());
     while !peri.RCC.cfgr.read().sws().is_pll() { 
