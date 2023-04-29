@@ -34,5 +34,5 @@ usb-device = "0.2.9"
 usbd-hid = "0.6.1"
 
 [dependencies.stm32f4xx-hal]
-features = ["stm32f401", "rt"]
+features = ["stm32f401", "rt", "usb_fs"]
 version = "0.15.0"

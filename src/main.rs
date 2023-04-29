@@ -19,17 +19,20 @@ use cortex_m_rt::entry;
 
 use hal::pac;
 use hal::prelude::*;
+use hal::otg_fs::{USB, UsbBus};
 
 use usb_device::prelude::*;
 use usbd_hid::descriptor::MouseReport;
 use usbd_hid::hid_class::HIDClass;
+
+static mut EP_MEMORY: [u32; 1024] = [0; 1024];
 
 #[entry]
 fn main() -> ! {
     let dp = pac::Peripherals::take().unwrap();
     let cp = cortex_m::peripheral::Peripherals::take().unwrap();
 
-    let mut rcc = dp.RCC.constrain();
+    let rcc = dp.RCC.constrain();
     
     let clocks = rcc
         .cfgr
@@ -39,14 +42,37 @@ fn main() -> ! {
         .pclk2(24.MHz())
         .freeze();
 
-    let mut gpioc = dp.GPIOC.split();
+    let gpioc = dp.GPIOC.split();
     
     let mut led_blue = gpioc.pc13.into_push_pull_output();
     led_blue.set_low();
 
     let mut cp_delay = delay::Delay::new(cp.SYST, 48000000_u32);
+
+    let gpioa = dp.GPIOA.split();
+
+    let usb = USB {
+        usb_global: dp.OTG_FS_GLOBAL,
+        usb_device: dp.OTG_FS_DEVICE,
+        usb_pwrclk: dp.OTG_FS_PWRCLK,
+        pin_dm: gpioa.pa11.into_alternate(),
+        pin_dp: gpioa.pa12.into_alternate(),
+        hclk: clocks.hclk(),
+    };
+
+    let usb_bus = UsbBus::new(usb, unsafe { &mut EP_MEMORY });
+
+    let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x045e, 0x028e))
+        .manufacturer("©Microsoft")
+        .product("Controller")
+        .serial_number("TEST")
+        .device_class(0)
+        .build();
     
     loop {
+        if usb_dev.poll(&mut []) {
+        }
+
         led_blue.set_high();
         cp_delay.delay_ms(500_u32);
         led_blue.set_low();
