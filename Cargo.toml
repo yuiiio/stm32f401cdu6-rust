@@ -27,10 +27,12 @@ debug = true
 
 [dependencies]
 cortex-m = "0.7.7"
-cortex-m-rt = "0.7.3"
+cortex-m-rt = { version = "0.7.3", features = ["device"] }
 cortex-m-semihosting = "0.5.0"
 panic-halt = "0.2.0"
+usb-device = "0.2.9"
+usbd-hid = "0.6.1"
 
-[dependencies.stm32f4]
+[dependencies.stm32f4xx-hal]
 features = ["stm32f401", "rt"]
 version = "0.15.0"
