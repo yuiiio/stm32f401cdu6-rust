@@ -142,20 +142,20 @@ fn main() -> ! {
     let mut cp_delay = cortex_m::delay::Delay::new(cp.SYST, clocks.sysclk().to_Hz());
 
     // for st7789 display
-    let rst = gpiob.pb6.into_push_pull_output_in_state(PinState::Low); // reset pin
-    let dc = gpiob.pb7.into_push_pull_output_in_state(PinState::Low); // dc pin
+    let rst = gpiob.pb10.into_push_pull_output_in_state(PinState::Low); // reset pin
+    let dc = gpiob.pb12.into_push_pull_output_in_state(PinState::Low); // dc pin
     // Note. We set GPIO speed as VeryHigh to it corresponds to SPI frequency 3MHz.
     // Otherwise it may lead to the 'wrong last bit in every received byte' problem.
     let spi_mosi = gpiob
-        .pb5
+        .pb15
         .into_alternate()
         .speed(Speed::VeryHigh)
         .internal_pull_up(true);
 
-    let spi_sclk = gpiob.pb3.into_alternate().speed(Speed::VeryHigh);
+    let spi_sclk = gpiob.pb13.into_alternate().speed(Speed::VeryHigh);
 
     
-    let spi = Spi::new(dp.SPI1, (spi_sclk, NoMiso::new(), spi_mosi), embedded_hal::spi::MODE_3, 42.MHz(), &clocks);
+    let spi = Spi::new(dp.SPI2, (spi_sclk, NoMiso::new(), spi_mosi), embedded_hal::spi::MODE_3, 42.MHz(), &clocks);
     
     // display interface abstraction from SPI and DC
     let di = SPIInterfaceNoCS::new(spi, dc);
