@@ -150,13 +150,11 @@ fn main() -> ! {
     let spi1_mosi = gpiob
         .pb5
         .into_alternate()
-        .speed(Speed::VeryHigh)
-        .internal_pull_up(true);
+        .speed(Speed::VeryHigh);
     let spi1_miso = gpiob
         .pb4
         .into_alternate()
-        .speed(Speed::VeryHigh)
-        .internal_pull_up(true);
+        .speed(Speed::VeryHigh);
     let spi1_sclk = gpiob.pb3.into_alternate().speed(Speed::VeryHigh);
     
     let mut spi1_cs = gpiob.pb9.into_push_pull_output().speed(Speed::VeryHigh);
@@ -304,13 +302,12 @@ fn main() -> ! {
         let dir: u16 = ((received_byte1[0] as u16) << 8 ) | received_byte2[0] as u16;
         */
 
-        let spi_write_buffer: [u8; 2] = [0x20, 0x00];
-        let mut spi_read_buffer: [u8; 2] = [0x00; 2];
+        let mut spi_buffer: [u8; 2] = [0x20, 0x00];
         spi1_cs.set_low();
-        spi1.transfer(&mut spi_read_buffer, &spi_write_buffer).unwrap();
+        spi1.transfer_in_place(&mut spi_buffer).unwrap();
         spi1_cs.set_high();
 
-        let dir: u16 = ((spi_read_buffer[0] as u16) << 8 ) | spi_read_buffer[1] as u16;
+        let dir: u16 = ((spi_buffer[0] as u16) << 8 ) | spi_buffer[1] as u16;
 
 
         for i in 0..240 {
