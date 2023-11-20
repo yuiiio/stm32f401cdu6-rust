@@ -289,6 +289,7 @@ fn main() -> ! {
         }
         */
 
+        /*
         //spi1_cs.set_low();
         while !spi1.is_tx_empty() {}
         spi1.send(0x20).unwrap();
@@ -301,6 +302,16 @@ fn main() -> ! {
         //spi1_cs.set_high();
 
         let dir: u16 = ((received_byte1[0] as u16) << 8 ) | received_byte2[0] as u16;
+        */
+
+        let spi_write_buffer: [u8; 2] = [0x20, 0x00];
+        let mut spi_read_buffer: [u8; 2] = [0x00; 2];
+        spi1_cs.set_low();
+        spi1.transfer(&mut spi_read_buffer, &spi_write_buffer).unwrap();
+        spi1_cs.set_high();
+
+        let dir: u16 = ((spi_read_buffer[0] as u16) << 8 ) | spi_read_buffer[1] as u16;
+
 
         for i in 0..240 {
             buffer[i] = if (dir >> 0) > 239 { 239 } else { (dir >> 0) as u8 };
