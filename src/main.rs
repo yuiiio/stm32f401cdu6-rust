@@ -287,27 +287,30 @@ fn main() -> ! {
         }
         */
 
-        /*
-        //spi1_cs.set_low();
-        while !spi1.is_tx_empty() {}
-        spi1.send(0x20).unwrap();
-        while !spi1.is_rx_not_empty() {}
+        spi1_cs.set_low();
+        spi1.write(&[0x20]).unwrap();
+        spi1_cs.set_high();
+
+        spi1_cs.set_low();
         let mut received_byte1: [u8; 1] = [0x00];
         spi1.read(&mut received_byte1).unwrap(); // not need block!() ?
-        while !spi1.is_rx_not_empty() {}
+        spi1_cs.set_high();
+
+        spi1_cs.set_low();
         let mut received_byte2: [u8; 1] = [0x00];
         spi1.read(&mut received_byte2).unwrap(); // not need block!() ?
-        //spi1_cs.set_high();
+        spi1_cs.set_high();
 
         let dir: u16 = ((received_byte1[0] as u16) << 8 ) | received_byte2[0] as u16;
-        */
 
+        /*
         let mut spi_buffer: [u8; 2] = [0x20, 0x00];
         spi1_cs.set_low();
         spi1.transfer_in_place(&mut spi_buffer).unwrap();
         spi1_cs.set_high();
 
         let dir: u16 = ((spi_buffer[0] as u16) << 8 ) | spi_buffer[1] as u16;
+        */
 
 
         for i in 0..240 {
