@@ -14,6 +14,7 @@ use core::f32::consts::{PI};
 use micromath::F32Ext;
 
 use hal::{
+    block,
     pac::{self, ADC1},
     gpio::{Speed, PinState},
     prelude::*,
@@ -28,6 +29,10 @@ use hal::{
 //use cortex_m::asm;
 use cortex_m_rt::entry;
 //use cortex_m::peripheral::{Peripherals, syst};
+use cortex_m::prelude::{
+    _embedded_hal_spi_FullDuplex, 
+    _embedded_hal_blocking_spi_Transfer, 
+    _embedded_hal_blocking_spi_Write, };
 
 use fugit::RateExtU32;
 use display_interface_spi::SPIInterfaceNoCS;
@@ -140,6 +145,24 @@ fn main() -> ! {
     let gpiob = dp.GPIOB.split();
 
     let mut cp_delay = cortex_m::delay::Delay::new(cp.SYST, clocks.sysclk().to_Hz());
+    
+    // for dir sensor
+    let spi1_mosi = gpiob
+        .pb5
+        .into_alternate()
+        .speed(Speed::VeryHigh)
+        .internal_pull_up(true);
+    let spi1_miso = gpiob
+        .pb4
+        .into_alternate()
+        .speed(Speed::VeryHigh)
+        .internal_pull_up(true);
+    let spi1_sclk = gpiob.pb3.into_alternate().speed(Speed::VeryHigh);
+    
+    let mut spi1_cs = gpiob.pb9.into_push_pull_output().speed(Speed::VeryHigh);
+    spi1_cs.set_high();
+    
+    let mut spi1 = Spi::new(dp.SPI1, (spi1_sclk, spi1_miso, spi1_mosi), embedded_hal::spi::MODE_0, 1.MHz(), &clocks);
 
     // for st7789 display
     let rst = gpiob.pb10.into_push_pull_output_in_state(PinState::Low); // reset pin
@@ -210,6 +233,19 @@ fn main() -> ! {
     let buffer2: &mut [u8; 240] = &mut [0; 240];
     let mut flip: bool = true;
     loop {
+        let mut buffer: &mut [u8; 240] = &mut [0; 240];
+        let mut prev: &mut [u8; 240] = &mut [0; 240];
+        if flip == true {
+            buffer = buffer1;
+            prev = buffer2;
+            flip = false;
+        } else {
+            buffer = buffer2;
+            prev = buffer1;
+            flip = true;
+        }
+
+        /*
         let adc_results: &mut [u16; NUM_SAMPLES] = &mut [0; NUM_SAMPLES];
         for i in 0..NUM_SAMPLES {
             adc_results[i] = adc.convert(&adc_ch0, SampleTime::Cycles_480);
@@ -222,18 +258,6 @@ fn main() -> ! {
         }
 
         fftfix(&mut fr, &mut fi, &sinewave);
-
-        let mut buffer: &mut [u8; 240] = &mut [0; 240];
-        let mut prev: &mut [u8; 240] = &mut [0; 240];
-        if flip == true {
-            buffer = buffer1;
-            prev = buffer2;
-            flip = false;
-        } else {
-            buffer = buffer2;
-            prev = buffer1;
-            flip = true;
-        }
 
         let mut max: u32 = 0;
         let mut amplitudes: [u32; NUM_SAMPLES/2] = [0; NUM_SAMPLES/2];
@@ -262,6 +286,21 @@ fn main() -> ! {
         let pulse_strength: u16 = ((amplitudes[2] + amplitudes[4] + amplitudes[6] + amplitudes[8]) >> 5) as u16; // depend ball pulse
         for i in ((NUM_SAMPLES/2) + NUM_SAMPLES)..240 {
             buffer[i] = if pulse_strength > 239 { 239 } else { pulse_strength as u8 };
+        }
+        */
+
+        spi1_cs.set_low();
+        spi1.send(0x20).unwrap();
+        let mut received_byte1: [u8; 1] = [0x00];
+        spi1.read(&mut received_byte1).unwrap(); // not need block!() ?
+        let mut received_byte2: [u8; 1] = [0x00];
+        spi1.read(&mut received_byte2).unwrap(); // not need block!() ?
+        spi1_cs.set_high();
+
+        let dir: u16 = ((received_byte1[0] as u16) << 8 ) | received_byte2[0] as u16;
+
+        for i in 0..240 {
+            buffer[i] = if (dir >> 0) > 239 { 239 } else { (dir >> 0) as u8 };
         }
         
         // clear
