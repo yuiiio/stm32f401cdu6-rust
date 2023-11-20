@@ -169,19 +169,19 @@ fn main() -> ! {
     let dc = gpiob.pb12.into_push_pull_output_in_state(PinState::Low); // dc pin
     // Note. We set GPIO speed as VeryHigh to it corresponds to SPI frequency 3MHz.
     // Otherwise it may lead to the 'wrong last bit in every received byte' problem.
-    let spi_mosi = gpiob
+    let spi2_mosi = gpiob
         .pb15
         .into_alternate()
         .speed(Speed::VeryHigh)
         .internal_pull_up(true);
 
-    let spi_sclk = gpiob.pb13.into_alternate().speed(Speed::VeryHigh);
+    let spi2_sclk = gpiob.pb13.into_alternate().speed(Speed::VeryHigh);
 
     
-    let spi = Spi::new(dp.SPI2, (spi_sclk, NoMiso::new(), spi_mosi), embedded_hal::spi::MODE_3, 42.MHz(), &clocks);
+    let spi2 = Spi::new(dp.SPI2, (spi2_sclk, NoMiso::new(), spi2_mosi), embedded_hal::spi::MODE_3, 21.MHz(), &clocks);
     
     // display interface abstraction from SPI and DC
-    let di = SPIInterfaceNoCS::new(spi, dc);
+    let di = SPIInterfaceNoCS::new(spi2, dc);
     
     // create driver
     let mut display = ST7789::new(di, rst, 240, 240);
@@ -289,13 +289,16 @@ fn main() -> ! {
         }
         */
 
-        spi1_cs.set_low();
+        //spi1_cs.set_low();
+        while !spi1.is_tx_empty() {}
         spi1.send(0x20).unwrap();
+        while !spi1.is_rx_not_empty() {}
         let mut received_byte1: [u8; 1] = [0x00];
         spi1.read(&mut received_byte1).unwrap(); // not need block!() ?
+        while !spi1.is_rx_not_empty() {}
         let mut received_byte2: [u8; 1] = [0x00];
         spi1.read(&mut received_byte2).unwrap(); // not need block!() ?
-        spi1_cs.set_high();
+        //spi1_cs.set_high();
 
         let dir: u16 = ((received_byte1[0] as u16) << 8 ) | received_byte2[0] as u16;
 
@@ -319,6 +322,6 @@ fn main() -> ! {
             //}
         }
 
-        cp_delay.delay_ms(1000_u32);
+        cp_delay.delay_ms(100_u32);
     }
 }
