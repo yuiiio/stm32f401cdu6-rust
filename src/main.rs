@@ -194,6 +194,15 @@ fn main() -> ! {
 
     // Configure pa0 as an analog input
     let adc_ch0 = gpioa.pa0.into_analog();
+    let adc_ch1 = gpioa.pa1.into_analog();
+    let adc_ch2 = gpioa.pa2.into_analog();
+    let adc_ch3 = gpioa.pa3.into_analog();
+    let adc_ch4 = gpioa.pa4.into_analog();
+    let adc_ch5 = gpioa.pa5.into_analog();
+    let adc_ch6 = gpioa.pa6.into_analog();
+    let adc_ch7 = gpioa.pa7.into_analog();
+    let adc_ch8 = gpiob.pb0.into_analog();
+    let adc_ch9 = gpiob.pb1.into_analog();
 
     let adc_config = AdcConfig::default()
             //.dma(Dma::Continuous)
@@ -231,16 +240,24 @@ fn main() -> ! {
             flip = true;
         }
 
-        /*
-        let adc_results: &mut [u16; NUM_SAMPLES] = &mut [0; NUM_SAMPLES];
+        let adc_results: &mut [[u16; NUM_SAMPLES]; 10] = &mut [[0; NUM_SAMPLES]; 10];
         for i in 0..NUM_SAMPLES {
-            adc_results[i] = adc.convert(&adc_ch0, SampleTime::Cycles_480);
+            adc_results[0][i] = adc.convert(&adc_ch0, SampleTime::Cycles_480);
+            adc_results[1][i] = adc.convert(&adc_ch1, SampleTime::Cycles_480);
+            adc_results[2][i] = adc.convert(&adc_ch2, SampleTime::Cycles_480);
+            adc_results[3][i] = adc.convert(&adc_ch3, SampleTime::Cycles_480);
+            adc_results[4][i] = adc.convert(&adc_ch4, SampleTime::Cycles_480);
+            adc_results[5][i] = adc.convert(&adc_ch5, SampleTime::Cycles_480);
+            adc_results[6][i] = adc.convert(&adc_ch6, SampleTime::Cycles_480);
+            adc_results[7][i] = adc.convert(&adc_ch7, SampleTime::Cycles_480);
+            adc_results[8][i] = adc.convert(&adc_ch8, SampleTime::Cycles_480);
+            adc_results[9][i] = adc.convert(&adc_ch9, SampleTime::Cycles_480);
         }
 
         let mut fr: [i16; NUM_SAMPLES] = [0; NUM_SAMPLES];
         let mut fi: [i16; NUM_SAMPLES] = [0; NUM_SAMPLES];
         for i in 0..NUM_SAMPLES {
-            fr[i] = adc_results[i] as i16;
+            fr[i] = adc_results[0][i] as i16;
         }
 
         fftfix(&mut fr, &mut fi, &sinewave);
@@ -265,7 +282,7 @@ fn main() -> ! {
             // raw adc_in is 12bit >> 4 => 8bit
             // u8 max is 255
             // need clamp or scale to 240
-            let adc_8bit: u8 = (adc_results[i] >> 4) as u8;
+            let adc_8bit: u8 = (adc_results[0][i] >> 4) as u8;
             buffer[(NUM_SAMPLES/2) + i] = if adc_8bit > 239 { 239 } else { adc_8bit };
         }
 
@@ -273,8 +290,9 @@ fn main() -> ! {
         for i in ((NUM_SAMPLES/2) + NUM_SAMPLES)..240 {
             buffer[i] = if pulse_strength > 239 { 239 } else { pulse_strength as u8 };
         }
-        */
 
+        /*
+        // dir sensor
         let addr: u8 = 0x50 >> 1;
         let addr2: u8 = 0x51 >> 1;
         let reg: u8 = 0x20;
@@ -292,6 +310,7 @@ fn main() -> ! {
         for i in 0..240 {
             buffer[i] = if (dir >> 0) > 239 { 239 } else { (dir >> 0) as u8 };
         }
+        */
         
         // clear
         for i in 0..240 {
