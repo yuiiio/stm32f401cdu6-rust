@@ -19,6 +19,7 @@ use hal::{
     gpio::{Speed, PinState},
     prelude::*,
     spi::*,
+    i2c::*,
     adc::{
         config::{AdcConfig, Clock, Dma, Resolution, SampleTime, Scan, Sequence},
         Adc,
@@ -147,20 +148,7 @@ fn main() -> ! {
     let mut cp_delay = cortex_m::delay::Delay::new(cp.SYST, clocks.sysclk().to_Hz());
     
     // for dir sensor
-    let spi1_mosi = gpiob
-        .pb5
-        .into_alternate()
-        .speed(Speed::VeryHigh);
-    let spi1_miso = gpiob
-        .pb4
-        .into_alternate()
-        .speed(Speed::VeryHigh);
-    let spi1_sclk = gpiob.pb3.into_alternate().speed(Speed::VeryHigh);
-    
-    let mut spi1_cs = gpiob.pb9.into_push_pull_output().speed(Speed::VeryHigh);
-    spi1_cs.set_high();
-    
-    let mut spi1 = Spi::new(dp.SPI1, (spi1_sclk, spi1_miso, spi1_mosi), embedded_hal::spi::MODE_0, 1.MHz(), &clocks);
+    let mut i2c = I2c::new(dp.I2C1, (gpiob.pb8, gpiob.pb9), 400.kHz(), &clocks);
 
     // for st7789 display
     let rst = gpiob.pb10.into_push_pull_output_in_state(PinState::Low); // reset pin
@@ -287,31 +275,19 @@ fn main() -> ! {
         }
         */
 
-        spi1_cs.set_low();
-        spi1.write(&[0x20]).unwrap();
-        spi1_cs.set_high();
+        let addr: u8 = 0x50 >> 1;
+        let addr2: u8 = 0x51 >> 1;
+        let reg: u8 = 0x20;
 
-        spi1_cs.set_low();
-        let mut received_byte1: [u8; 1] = [0x00];
-        spi1.read(&mut received_byte1).unwrap(); // not need block!() ?
-        spi1_cs.set_high();
+        let _ = i2c.write(addr, &[reg]);
 
-        spi1_cs.set_low();
-        let mut received_byte2: [u8; 1] = [0x00];
-        spi1.read(&mut received_byte2).unwrap(); // not need block!() ?
-        spi1_cs.set_high();
+        let _ = i2c.write(addr2, &[reg]);
 
-        let dir: u16 = ((received_byte1[0] as u16) << 8 ) | received_byte2[0] as u16;
+        let mut read_data: [u8; 2] = [0x00; 2];
 
-        /*
-        let mut spi_buffer: [u8; 2] = [0x20, 0x00];
-        spi1_cs.set_low();
-        spi1.transfer_in_place(&mut spi_buffer).unwrap();
-        spi1_cs.set_high();
+        let _ = i2c.read(addr, &mut read_data);
 
-        let dir: u16 = ((spi_buffer[0] as u16) << 8 ) | spi_buffer[1] as u16;
-        */
-
+        let dir: u16 = ((read_data[0] as u16) << 8 ) | read_data[1] as u16;
 
         for i in 0..240 {
             buffer[i] = if (dir >> 0) > 239 { 239 } else { (dir >> 0) as u8 };
