@@ -224,6 +224,12 @@ fn main() -> ! {
         sinewave[i] = ((6.283 * (i as f32 / NUM_SAMPLES as f32)).sin() as f32 * 32768.0 as f32) as i16; // float2fix15 //2^15
     }
 
+    let mut rsqrt_table: [u8; ((u16::MAX as u32 + 1) / 2) as usize] = [0; ((u16::MAX as u32 + 1) / 2) as usize]; // /2 resolution: 65536 * 16 bit = 131... KBytes / 2 = 65.5... KBytes
+    for i in 0..((u16::MAX as u32 + 1) / 2) {
+        let x = i << 1; // *2
+        rsqrt_table[i as usize] = ((1.0 / (x as f32).sqrt()) * u8::MAX as f32) as u8;
+    }
+
     let buffer1: &mut [u8; 240] = &mut [0; 240];
     let buffer2: &mut [u8; 240] = &mut [0; 240];
     let mut flip: bool = true;
@@ -287,8 +293,14 @@ fn main() -> ! {
         }
 
         let pulse_strength: u16 = ((amplitudes[2] + amplitudes[4] + amplitudes[6] + amplitudes[8]) >> 5) as u16; // depend ball pulse
-        for i in ((NUM_SAMPLES/2) + NUM_SAMPLES)..240 {
+        for i in ((NUM_SAMPLES/2) + NUM_SAMPLES)..240-20 {
             buffer[i] = if pulse_strength > 239 { 239 } else { pulse_strength as u8 };
+        }
+
+        let ball_dist: u8 = rsqrt_table[(pulse_strength >> 1) as usize];
+
+        for i in 240-20..240 {
+            buffer[i] = if (ball_dist >> 0) > 239 { 239 } else { (ball_dist >> 0) as u8 };
         }
 
         /*
