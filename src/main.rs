@@ -268,20 +268,13 @@ fn main() -> ! {
 
         fftfix(&mut fr, &mut fi, &sinewave);
 
-        let mut max: u32 = 0;
-        let mut amplitudes: [u32; NUM_SAMPLES/2] = [0; NUM_SAMPLES/2];
+        let mut amplitudes: [u16; NUM_SAMPLES/2] = [0; NUM_SAMPLES/2];
         for i in 0..NUM_SAMPLES/2 { // 128 ~ 240 should 00
-            amplitudes[i] = ((fr[i].abs() + fi[i].abs()) as u32 ) << 5;
-
-            if amplitudes[i] > max {
-                max = amplitudes[i];
-            }
+            amplitudes[i] = (fr[i].abs() + fi[i].abs()) as u16;
         }
 
         for i in 0..NUM_SAMPLES/2 { // show fft result
-            // buffer[i] = (amplitudes[i] as f32 / max as f32 * 240.0) as u8;
-            let adc_8bit: u8 = (amplitudes[i] >> 4) as u8;
-            buffer[i] = if adc_8bit > 239 { 239 } else { adc_8bit };
+            buffer[i] = if amplitudes[i] > 239 { 239 } else { amplitudes[i] as u8 };
         }
 
         for i in 0..NUM_SAMPLES { // show raw input in free space
@@ -292,9 +285,9 @@ fn main() -> ! {
             buffer[(NUM_SAMPLES/2) + i] = if adc_8bit > 239 { 239 } else { adc_8bit };
         }
 
-        let pulse_strength: u16 = ((amplitudes[2] + amplitudes[4] + amplitudes[6] + amplitudes[8]) >> 5) as u16; // depend ball pulse
+        let pulse_strength: u16 = (amplitudes[2*2] + amplitudes[4*2] + amplitudes[6*2]) as u16; // depend ball pulse
         for i in ((NUM_SAMPLES/2) + NUM_SAMPLES)..240-20 {
-            buffer[i] = if pulse_strength > 239 { 239 } else { pulse_strength as u8 };
+            buffer[i] = if (pulse_strength >> 0) > 239 { 239 } else { (pulse_strength >> 0) as u8 };
         }
 
         let ball_dist: u8 = rsqrt_table[(pulse_strength >> 1) as usize];
@@ -340,6 +333,6 @@ fn main() -> ! {
             //}
         }
 
-        cp_delay.delay_ms(100_u32);
+        cp_delay.delay_ms(500_u32);
     }
 }
