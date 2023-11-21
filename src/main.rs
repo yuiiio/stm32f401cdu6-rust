@@ -207,9 +207,9 @@ fn main() -> ! {
     let adc_config = AdcConfig::default()
             //.dma(Dma::Continuous)
             //Scan mode is also required to convert a sequence
-            .scan(Scan::Enabled)
+            //.scan(Scan::Enabled)
             .resolution(Resolution::Twelve)
-            .clock(Clock::Pclk2_div_4); // 84 / 4 = 21MHz need more down ? (adc max datasheet says
+            .clock(Clock::Pclk2_div_2); // 84 / 4 = 21MHz need more down ? (adc max datasheet says
                                         // 36MHz)
                                         // 12-bit resolution single ADC 2 Msps
 
@@ -248,16 +248,16 @@ fn main() -> ! {
 
         let adc_results: &mut [[u16; NUM_SAMPLES]; 10] = &mut [[0; NUM_SAMPLES]; 10];
         for i in 0..NUM_SAMPLES {
-            adc_results[0][i] = adc.convert(&adc_ch0, SampleTime::Cycles_480);
-            adc_results[1][i] = adc.convert(&adc_ch1, SampleTime::Cycles_480);
-            adc_results[2][i] = adc.convert(&adc_ch2, SampleTime::Cycles_480);
-            adc_results[3][i] = adc.convert(&adc_ch3, SampleTime::Cycles_480);
-            adc_results[4][i] = adc.convert(&adc_ch4, SampleTime::Cycles_480);
-            adc_results[5][i] = adc.convert(&adc_ch5, SampleTime::Cycles_480);
-            adc_results[6][i] = adc.convert(&adc_ch6, SampleTime::Cycles_480);
-            adc_results[7][i] = adc.convert(&adc_ch7, SampleTime::Cycles_480);
-            adc_results[8][i] = adc.convert(&adc_ch8, SampleTime::Cycles_480);
-            adc_results[9][i] = adc.convert(&adc_ch9, SampleTime::Cycles_480);
+            adc_results[0][i] = adc.convert(&adc_ch0, SampleTime::Cycles_3);
+            adc_results[1][i] = adc.convert(&adc_ch1, SampleTime::Cycles_3);
+            adc_results[2][i] = adc.convert(&adc_ch2, SampleTime::Cycles_3);
+            adc_results[3][i] = adc.convert(&adc_ch3, SampleTime::Cycles_3);
+            adc_results[4][i] = adc.convert(&adc_ch4, SampleTime::Cycles_3);
+            adc_results[5][i] = adc.convert(&adc_ch5, SampleTime::Cycles_3);
+            adc_results[6][i] = adc.convert(&adc_ch6, SampleTime::Cycles_3);
+            adc_results[7][i] = adc.convert(&adc_ch7, SampleTime::Cycles_3);
+            adc_results[8][i] = adc.convert(&adc_ch8, SampleTime::Cycles_3);
+            adc_results[9][i] = adc.convert(&adc_ch9, SampleTime::Cycles_3);
         }
 
         let mut fr: [i16; NUM_SAMPLES] = [0; NUM_SAMPLES];
