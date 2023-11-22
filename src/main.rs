@@ -192,6 +192,12 @@ fn main() -> ! {
     // setup GPIOA
     let gpioa = dp.GPIOA.split();
 
+    let dma = StreamsTuple::new(dp.DMA2);
+    let config = DmaConfig::default()
+        .transfer_complete_interrupt(true)
+        .memory_increment(true)
+        .double_buffer(false);
+
     // Configure pa0 as an analog input
     let adc_ch0 = gpioa.pa0.into_analog();
     let adc_ch1 = gpioa.pa1.into_analog();
@@ -205,9 +211,9 @@ fn main() -> ! {
     let adc_ch9 = gpiob.pb1.into_analog();
 
     let adc_config = AdcConfig::default()
-            //.dma(Dma::Continuous)
+            .dma(Dma::Continuous)
             //Scan mode is also required to convert a sequence
-            //.scan(Scan::Enabled)
+            .scan(Scan::Enabled)
             .resolution(Resolution::Twelve)
             .clock(Clock::Pclk2_div_2); // 84 / 4 = 21MHz need more down ? (adc max datasheet says
                                         // 36MHz)
@@ -216,9 +222,23 @@ fn main() -> ! {
     // setup ADC
     let mut adc = Adc::adc1(dp.ADC1, true, adc_config);
 
-    //adc.configure_channel(&adc_ch0, Sequence::One, SampleTime::Cycles_480); // need 480 cycles from datasheet
+    adc.configure_channel(&adc_ch0, Sequence::One, SampleTime::Cycles_3);
+    adc.configure_channel(&adc_ch1, Sequence::Two, SampleTime::Cycles_3);
+    adc.configure_channel(&adc_ch2, Sequence::Three, SampleTime::Cycles_3);
+    adc.configure_channel(&adc_ch3, Sequence::Four, SampleTime::Cycles_3);
+    adc.configure_channel(&adc_ch4, Sequence::Five, SampleTime::Cycles_3);
+    adc.configure_channel(&adc_ch5, Sequence::Six, SampleTime::Cycles_3);
+    adc.configure_channel(&adc_ch6, Sequence::Seven, SampleTime::Cycles_3);
+    adc.configure_channel(&adc_ch7, Sequence::Eight, SampleTime::Cycles_3);
+    adc.configure_channel(&adc_ch8, Sequence::Nine, SampleTime::Cycles_3);
+    adc.configure_channel(&adc_ch9, Sequence::Ten, SampleTime::Cycles_3);
 
-        // should calc once
+    let first_buffer = cortex_m::singleton!(: [u16; 10] = [0; 10]).unwrap();
+    let mut second_buffer: Option<&'static mut [u16; 10]> = Some(cortex_m::singleton!(: [u16; 10] = [0; 10]).unwrap());
+
+    let mut transfer = Transfer::init_peripheral_to_memory(dma.0, adc, first_buffer, None, config);
+
+    // should calc once
     let mut sinewave: [i16; NUM_SAMPLES] = [0; NUM_SAMPLES];
     for i in 0..NUM_SAMPLES {
         sinewave[i] = ((6.283 * (i as f32 / NUM_SAMPLES as f32)).sin() as f32 * 32768.0 as f32) as i16; // float2fix15 //2^15
@@ -248,6 +268,28 @@ fn main() -> ! {
 
         let adc_results: &mut [[u16; NUM_SAMPLES]; 10] = &mut [[0; NUM_SAMPLES]; 10];
         for i in 0..NUM_SAMPLES {
+            transfer.start(|adc| {
+                adc.start_conversion();
+            });
+
+            transfer.wait();
+
+            let (dma_buf, _) = transfer
+                .next_transfer(second_buffer.take().unwrap())
+                .unwrap();
+            adc_results[0][i] = dma_buf[0];
+            adc_results[1][i] = dma_buf[1];
+            adc_results[2][i] = dma_buf[2];
+            adc_results[3][i] = dma_buf[3];
+            adc_results[4][i] = dma_buf[4];
+            adc_results[5][i] = dma_buf[5];
+            adc_results[6][i] = dma_buf[6];
+            adc_results[7][i] = dma_buf[7];
+            adc_results[8][i] = dma_buf[8];
+            adc_results[9][i] = dma_buf[9];
+
+            second_buffer = Some(dma_buf);
+        /*
             adc_results[0][i] = adc.convert(&adc_ch0, SampleTime::Cycles_3);
             adc_results[1][i] = adc.convert(&adc_ch1, SampleTime::Cycles_3);
             adc_results[2][i] = adc.convert(&adc_ch2, SampleTime::Cycles_3);
@@ -258,6 +300,7 @@ fn main() -> ! {
             adc_results[7][i] = adc.convert(&adc_ch7, SampleTime::Cycles_3);
             adc_results[8][i] = adc.convert(&adc_ch8, SampleTime::Cycles_3);
             adc_results[9][i] = adc.convert(&adc_ch9, SampleTime::Cycles_3);
+        */
         }
 
         let mut fr: [i16; NUM_SAMPLES] = [0; NUM_SAMPLES];
