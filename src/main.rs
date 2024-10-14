@@ -18,13 +18,19 @@ fn main() -> ! {
         let clocks = rcc.cfgr.use_hse(25.MHz()).freeze();
 
         let gpioa = dp.GPIOA.split();
+        let gpiob = dp.GPIOB.split();
 
-        let (_, (pwm_c1, pwm_c2, pwm_c3, ..)) = dp.TIM1.pwm_us(100.micros(), &clocks);
+        let (_, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_us(100.micros(), &clocks);
         let mut pwm_c1 = pwm_c1.with(gpioa.pa8);
         let mut pwm_c2 = pwm_c2.with(gpioa.pa9);
         let mut pwm_c3 = pwm_c3.with(gpioa.pa10);
 
-        let mut counter = dp.TIM2.counter_us(&clocks);
+        let (_, (pwm_c4, pwm_c5, pwm_c6,..)) = dp.TIM2.pwm_us(100.micros(), &clocks);
+        let mut pwm_c4 = pwm_c4.with(gpioa.pa0);
+        let mut pwm_c5 = pwm_c5.with(gpioa.pa1);
+        let mut pwm_c6 = pwm_c6.with(gpioa.pa2);
+
+        let mut counter = dp.TIM3.counter_us(&clocks);
         let max_duty = pwm_c1.get_max_duty();
 
         const N: usize = 50;
@@ -40,6 +46,9 @@ fn main() -> ! {
         pwm_c1.enable();
         pwm_c2.enable();
         pwm_c3.enable();
+        pwm_c4.enable();
+        pwm_c5.enable();
+        pwm_c6.enable();
         let mut i = 0;
         loop {
             if i == 0 {
