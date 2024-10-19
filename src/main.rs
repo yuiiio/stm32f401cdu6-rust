@@ -8,7 +8,7 @@ use panic_halt as _;
 use core::f32::consts::FRAC_PI_2;
 use cortex_m_rt::entry;
 use micromath::F32Ext;
-use stm32f4xx_hal::{pac, prelude::*};
+use stm32f4xx_hal::{pac, prelude::*, gpio::PinState};
 
 #[entry]
 fn main() -> ! {
@@ -21,56 +21,53 @@ fn main() -> ! {
         let gpiob = dp.GPIOB.split();
 
         let (_, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_us(100.micros(), &clocks);
-        let mut pwm_c1 = pwm_c1.with(gpioa.pa8);
-        let mut pwm_c2 = pwm_c2.with(gpioa.pa9);
-        let mut pwm_c3 = pwm_c3.with(gpioa.pa10);
+        /* N-ch */
+        let mut m1_u_pwm_n = pwm_c1.with(gpioa.pa8);
+        let mut m1_v_pwm_n = pwm_c2.with(gpioa.pa9);
+        let mut m1_w_pwm_n = pwm_c3.with(gpioa.pa10);
 
+        /* P-ch */
+        let mut m1_u_p = gpioa.pa11.into_push_pull_output_in_state(PinState::Low);
+        let mut m1_v_p = gpioa.pa12.into_push_pull_output_in_state(PinState::Low);
+        let mut m1_w_p = gpioa.pa13.into_push_pull_output_in_state(PinState::Low);
+
+        m1_u_p.set_low();
+        m1_v_p.set_low();
+        m1_w_p.set_low();
+
+        /*
         let (_, (pwm_c4, pwm_c5, pwm_c6,..)) = dp.TIM2.pwm_us(100.micros(), &clocks);
         let mut pwm_c4 = pwm_c4.with(gpioa.pa0);
         let mut pwm_c5 = pwm_c5.with(gpioa.pa1);
         let mut pwm_c6 = pwm_c6.with(gpioa.pa2);
+        */
 
-        let mut counter = dp.TIM3.counter_us(&clocks);
-        let max_duty = pwm_c1.get_max_duty();
+        //let mut counter = dp.TIM3.counter_us(&clocks);
+        //let max_duty = m1_u.get_max_duty();
+        //counter.start(100.micros()).unwrap();
+        
+        m1_u_pwm_n.enable();
+        m1_v_pwm_n.enable();
+        m1_w_pwm_n.enable();
+        m1_u_pwm_n.set_duty(0);
+        m1_v_pwm_n.set_duty(0);
+        m1_w_pwm_n.set_duty(0);
 
-        const N: usize = 50;
-        let mut sin_a = [0_u16; N + 1];
-        // Fill sinus array
-        let a = FRAC_PI_2 / (N as f32);
-        for (i, b) in sin_a.iter_mut().enumerate() {
-            let angle = a * (i as f32);
-            *b = (angle.sin() * (max_duty as f32)) as u16;
-        }
+        let mut led1 = gpioa.pa6.into_push_pull_output_in_state(PinState::Low);
+        let mut led2 = gpioa.pa7.into_push_pull_output_in_state(PinState::Low);
+        let mut led3 = gpioa.pa14.into_push_pull_output_in_state(PinState::Low);
+        let mut delay = dp.TIM5.delay_us(&clocks);
 
-        counter.start(100.micros()).unwrap();
-        pwm_c1.enable();
-        pwm_c2.enable();
-        pwm_c3.enable();
-        pwm_c4.enable();
-        pwm_c5.enable();
-        pwm_c6.enable();
-        let mut i = 0;
         loop {
-            if i == 0 {
-                pwm_c2.set_duty(0);
-            }
-            if i == 2 * N {
-                pwm_c1.set_duty(0);
-            }
-            if i < N {
-                pwm_c1.set_duty(sin_a[i]);
-            } else if i < 2 * N {
-                pwm_c1.set_duty(sin_a[2 * N - i]);
-            } else if i < 3 * N {
-                pwm_c2.set_duty(sin_a[i - 2 * N]);
-            } else {
-                pwm_c2.set_duty(sin_a[4 * N - i]);
-            }
-            nb::block!(counter.wait()).unwrap();
-            i += 1;
-            if i == 4 * N {
-                i -= 4 * N;
-            }
+            led1.set_high();
+            delay.delay_ms(1000);
+            led1.set_low();
+            led2.set_high();
+            delay.delay_ms(1000);
+            led2.set_low();
+            led3.set_high();
+            delay.delay_ms(1000);
+            led3.set_low();
         }
     }
 
