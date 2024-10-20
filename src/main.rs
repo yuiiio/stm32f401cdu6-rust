@@ -8,7 +8,12 @@ use panic_halt as _;
 use core::f32::consts::FRAC_PI_2;
 use cortex_m_rt::entry;
 use micromath::F32Ext;
-use stm32f4xx_hal::{pac, prelude::*, gpio::PinState};
+use stm32f4xx_hal::{
+    pac,
+    prelude::*,
+    gpio::{PinState, PushPull, Output, alt::TimCPin, Pin},
+    timer::pwm::PwmChannel,
+};
 
 /* 14 magnetic center, 12 coil brushless motor*/
 
@@ -51,8 +56,34 @@ use stm32f4xx_hal::{pac, prelude::*, gpio::PinState};
  *  (VとWの中間にHOLEが来るばあい、U->WでもU->Vでも変わらない)
  *  多分先に進ませたほうが良い(センサの反応が遅れるため)
  *
-
  * */
+
+const BRIDGE_DEAD_TIME_US: u32 = 10;
+
+/* [U_P, V_P, W_P,
+ *  U_N, V_N, W_N] */
+const BRIDGE_STATE :[[bool; 6]; 6] = [
+    /* 0 */
+    [ false, true, false, 
+    false, false, true ],
+    /* 1 */
+    [ true, false, false, 
+    false, false, true ],
+    /* 2 */
+    [ true, false, false, 
+    false, true, false ],
+    /* 3 */
+    [ false, false, true,
+    false, true, false ],
+    /* 4 */
+    [ false, false, true,
+    true, false, false ],
+    /* 5 */
+    [ false, true, false,
+    true, false, false ],
+];
+// 隣り合う同士(差-1 or 5<->0) はデッドタイムがいらない
+// ほかは、前にonになってたピンをオフにしてデッドタイムを挟む必要がある
 
 #[entry]
 fn main() -> ! {
@@ -68,7 +99,7 @@ fn main() -> ! {
         let m1_h2 = gpiob.pb1.into_floating_input();
         let m1_h3 = gpiob.pb2.into_floating_input();
 
-        let (_, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_us(100.micros(), &clocks);
+        let (_, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_us(100.nanos(), &clocks);
         /* N-ch */
         let mut m1_u_pwm_n = pwm_c1.with(gpioa.pa8);
         let mut m1_v_pwm_n = pwm_c2.with(gpioa.pa9);
@@ -106,6 +137,8 @@ fn main() -> ! {
         let mut led3 = gpioa.pa14.into_push_pull_output_in_state(PinState::Low);
         let mut delay = dp.TIM5.delay_us(&clocks);
 
+        let mut cur_bridge_state: i8 = 0;
+        let mut req_bridge_state: i8 = 0;
         loop {
             if m1_h1.is_high() {
                 led1.set_high()
@@ -133,6 +166,65 @@ fn main() -> ! {
             delay.delay_ms(1000);
             led3.set_low();
             */
+
+            /* test rotate without sensor */
+            if req_bridge_state == 5 {
+                req_bridge_state = 0;
+            } else {
+                req_bridge_state += 1;
+            }
+            
+            /* change bridge state */
+            let bridge_state_diff: u8 = req_bridge_state.abs_diff(cur_bridge_state);
+            if (bridge_state_diff <= 1) || bridge_state_diff == 5 {
+            } else { /* need DEADTIME */
+                m1_u_p.set_low();
+                m1_v_p.set_low();
+                m1_w_p.set_low();
+                m1_u_pwm_n.set_duty(0);
+                m1_v_pwm_n.set_duty(0);
+                m1_w_pwm_n.set_duty(0);
+
+                delay.delay_us(BRIDGE_DEAD_TIME_US);
+            }
+            let selected_bridge_state = BRIDGE_STATE[req_bridge_state as usize];
+            /* Pch */
+            if selected_bridge_state[0] == true {
+                m1_u_p.set_high();
+            } else {
+                m1_u_p.set_low();
+            }
+            if selected_bridge_state[1] == true {
+                m1_v_p.set_high();
+            } else {
+                m1_v_p.set_low();
+            }
+            if selected_bridge_state[2] == true {
+                m1_w_p.set_high();
+            } else {
+                m1_w_p.set_low();
+            }
+            /* Nch */
+            if selected_bridge_state[3] == true {
+                m1_u_pwm_n.set_duty(50);
+            } else {
+                m1_u_pwm_n.set_duty(0);
+            }
+            if selected_bridge_state[4] == true {
+                m1_v_pwm_n.set_duty(50);
+            } else {
+                m1_v_pwm_n.set_duty(0);
+            }
+            if selected_bridge_state[5] == true {
+                m1_w_pwm_n.set_duty(50);
+            } else {
+                m1_w_pwm_n.set_duty(0);
+            }
+
+            /* update cur state for next loop iter */
+            cur_bridge_state = req_bridge_state;
+
+            delay.delay_ms(20);
         }
     }
 
