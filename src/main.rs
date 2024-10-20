@@ -20,6 +20,10 @@ fn main() -> ! {
         let gpioa = dp.GPIOA.split();
         let gpiob = dp.GPIOB.split();
 
+        let m1_h1 = gpiob.pb0.into_floating_input();
+        let m1_h2 = gpiob.pb1.into_floating_input();
+        let m1_h3 = gpiob.pb2.into_floating_input();
+
         let (_, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_us(100.micros(), &clocks);
         /* N-ch */
         let mut m1_u_pwm_n = pwm_c1.with(gpioa.pa8);
@@ -59,6 +63,22 @@ fn main() -> ! {
         let mut delay = dp.TIM5.delay_us(&clocks);
 
         loop {
+            if m1_h1.is_high() {
+                led1.set_high()
+            } else {
+                led1.set_low()
+            }
+            if m1_h2.is_high() {
+                led2.set_high()
+            } else {
+                led2.set_low()
+            }
+            if m1_h3.is_high() {
+                led3.set_high()
+            } else {
+                led3.set_low()
+            }
+            /*
             led1.set_high();
             delay.delay_ms(1000);
             led1.set_low();
@@ -68,6 +88,7 @@ fn main() -> ! {
             led3.set_high();
             delay.delay_ms(1000);
             led3.set_low();
+            */
         }
     }
 
