@@ -10,6 +10,50 @@ use cortex_m_rt::entry;
 use micromath::F32Ext;
 use stm32f4xx_hal::{pac, prelude::*, gpio::PinState};
 
+/* 14 magnetic center, 12 coil brushless motor*/
+
+/* ~ U U' V' V W W' U' U V V' W' W ~ */
+
+/* hole sensor in (*) <-> (*)' */
+
+/* so can take ~(S|N) N  N   (N|S) S S~
+ *              ~H1   H2 H3           ~  
+ *
+ * if  H1:S, H2:S, H3:S 
+ *      (N|S), S, S 
+ *  or  S, S, (S|N)
+ *
+ * ex)
+ * magnet rotate clock-wise
+ * H1    H2    H3
+ * (N|S) S     S
+ * N     (N|S) S
+ * N     N     (N|S)
+ * (S|N) N     N
+ * S     (S|N) N
+ * S     S     (S|N)
+ *
+ * def (U, V, W) -> = N
+ * if want clock-wise and get (H1:N, H2:S, H3,S), then could two pattern
+ * H1    H2    H3
+ * HOLE  S     S     :) V->W
+ * or
+ * N     HOLE  S     :) U->W
+ * 
+ * second get (H1:N, H2:N, H3:S), then could two pattern
+ * H1    H2    H3
+ * N     HOLE  S     :) U->W
+ * or 
+ * N     N     (HOLE):) U->V
+ *  
+ *  しかし、以前に切り替わったのが H2 なため、H2がホールであると判断すべきか?
+ *  だが、もうH2を通過しているため、一つ進んだH3がHOLEとして制御すべきか?
+ *  (VとWの中間にHOLEが来るばあい、U->WでもU->Vでも変わらない)
+ *  多分先に進ませたほうが良い(センサの反応が遅れるため)
+ *
+
+ * */
+
 #[entry]
 fn main() -> ! {
     if let Some(dp) = pac::Peripherals::take() {
