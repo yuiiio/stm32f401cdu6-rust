@@ -100,7 +100,7 @@ fn main() -> ! {
         let m1_h2 = gpiob.pb1.into_floating_input();
         let m1_h3 = gpiob.pb2.into_floating_input();
 
-        let (_, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_us(100.nanos(), &clocks);
+        let (_, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_us(10.micros(), &clocks);
         /* N-ch */
         let mut m1_u_pwm_n = pwm_c1.with(gpioa.pa8);
         let mut m1_v_pwm_n = pwm_c2.with(gpioa.pa9);
@@ -136,7 +136,8 @@ fn main() -> ! {
         let mut led1 = gpioa.pa6.into_push_pull_output_in_state(PinState::Low);
         let mut led2 = gpioa.pa7.into_push_pull_output_in_state(PinState::Low);
         let mut led3 = gpioa.pa14.into_push_pull_output_in_state(PinState::Low);
-        let mut error_led = gpioc.pc13.into_push_pull_output_in_state(PinState::Low);
+        let mut error_led = gpioc.pc13.into_push_pull_output_in_state(PinState::High);
+        error_led.set_low();
         let mut delay = dp.TIM5.delay_us(&clocks);
 
         let mut cur_bridge_state: usize = 0;
