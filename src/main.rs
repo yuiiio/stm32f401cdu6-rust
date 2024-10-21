@@ -94,6 +94,7 @@ fn main() -> ! {
 
         let gpioa = dp.GPIOA.split();
         let gpiob = dp.GPIOB.split();
+        let gpioc = dp.GPIOC.split();
 
         let m1_h1 = gpiob.pb0.into_floating_input();
         let m1_h2 = gpiob.pb1.into_floating_input();
@@ -135,10 +136,11 @@ fn main() -> ! {
         let mut led1 = gpioa.pa6.into_push_pull_output_in_state(PinState::Low);
         let mut led2 = gpioa.pa7.into_push_pull_output_in_state(PinState::Low);
         let mut led3 = gpioa.pa14.into_push_pull_output_in_state(PinState::Low);
+        let mut error_led = gpioc.pc13.into_push_pull_output_in_state(PinState::Low);
         let mut delay = dp.TIM5.delay_us(&clocks);
 
-        let mut cur_bridge_state: i8 = 0;
-        let mut req_bridge_state: i8 = 0;
+        let mut cur_bridge_state: usize = 0;
+        let mut req_bridge_state: usize = 0;
         loop {
             if m1_h1.is_high() {
                 led1.set_high()
@@ -175,7 +177,7 @@ fn main() -> ! {
             }
             
             /* change bridge state */
-            let bridge_state_diff: u8 = req_bridge_state.abs_diff(cur_bridge_state);
+            let bridge_state_diff: usize = req_bridge_state.abs_diff(cur_bridge_state);
             if (bridge_state_diff <= 1) || bridge_state_diff == 5 {
             } else { /* need DEADTIME */
                 m1_u_p.set_low();
@@ -187,7 +189,7 @@ fn main() -> ! {
 
                 delay.delay_us(BRIDGE_DEAD_TIME_US);
             }
-            let selected_bridge_state = BRIDGE_STATE[req_bridge_state as usize];
+            let selected_bridge_state = BRIDGE_STATE[req_bridge_state];
             /* Pch */
             if selected_bridge_state[0] == true {
                 m1_u_p.set_high();
