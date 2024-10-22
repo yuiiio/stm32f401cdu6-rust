@@ -100,7 +100,7 @@ fn main() -> ! {
         let m1_h2 = gpiob.pb1.into_floating_input();
         let m1_h3 = gpiob.pb2.into_floating_input();
 
-        let (_, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_us(10.micros(), &clocks);
+        let (_, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_us(5.micros(), &clocks);
         /* N-ch */
         let mut m1_u_pwm_n = pwm_c1.with(gpioa.pa8);
         let mut m1_v_pwm_n = pwm_c2.with(gpioa.pa9);
