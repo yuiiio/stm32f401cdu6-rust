@@ -90,7 +90,10 @@ fn main() -> ! {
     if let Some(dp) = pac::Peripherals::take() {
         // Set up the system clock.
         let rcc = dp.RCC.constrain();
-        let clocks = rcc.cfgr.use_hse(25.MHz()).freeze();
+        let clocks = rcc.cfgr.use_hse(25.MHz())
+            .pclk1(42.MHz())
+            .pclk2(84.MHz())
+            .freeze();
 
         let gpioa = dp.GPIOA.split();
         let gpiob = dp.GPIOB.split();
