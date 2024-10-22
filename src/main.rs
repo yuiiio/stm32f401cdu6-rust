@@ -58,7 +58,7 @@ use stm32f4xx_hal::{
  *
  * */
 
-const BRIDGE_DEAD_TIME_US: u32 = 10;
+const BRIDGE_DEAD_TIME_US: u32 = 20;
 
 /* [U_P, V_P, W_P,
  *  U_N, V_N, W_N] */
@@ -209,17 +209,17 @@ fn main() -> ! {
             }
             /* Nch */
             if selected_bridge_state[3] == true {
-                m1_u_pwm_n.set_duty(50);
+                m1_u_pwm_n.set_duty(5);
             } else {
                 m1_u_pwm_n.set_duty(0);
             }
             if selected_bridge_state[4] == true {
-                m1_v_pwm_n.set_duty(50);
+                m1_v_pwm_n.set_duty(5);
             } else {
                 m1_v_pwm_n.set_duty(0);
             }
             if selected_bridge_state[5] == true {
-                m1_w_pwm_n.set_duty(50);
+                m1_w_pwm_n.set_duty(5);
             } else {
                 m1_w_pwm_n.set_duty(0);
             }
@@ -227,7 +227,7 @@ fn main() -> ! {
             /* update cur state for next loop iter */
             cur_bridge_state = req_bridge_state;
 
-            delay.delay_ms(20);
+            delay.delay_ms(10);
         }
     }
 
