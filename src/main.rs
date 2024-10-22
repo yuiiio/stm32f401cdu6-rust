@@ -160,17 +160,17 @@ fn main() -> ! {
 
             let m1_hole_sensor = [m1_h3.is_high(), m1_h2.is_high(), m1_h1.is_high()];
 
-            let rotate_dir: bool = true;
+            let rotate_dir: bool = false;
 
             /* 観測した時点で考えられる２つのパターンのうち回転方向に進んだものを採用する */
             /* 望む回転方向が逆の場合反転して進ませる必要がある(-1して反転(-3?) */
             let req_bridge_state: usize = match m1_hole_sensor {
-                [false, false, false] => { 0 },
-                [true, false, false] => { 1 },
-                [true, true, false] => { 2 },
-                [true, true, true] => { 3 },
-                [false, true, true] => { 4 },
-                [false, false, true] => { 5 },
+                [false, false, false] => { if rotate_dir == true { 0 } else { 2 } },
+                [true, false, false] => { if rotate_dir == true { 1 } else { 3 } },
+                [true, true, false] => {  if rotate_dir == true { 2 } else { 4 } },
+                [true, true, true] => { if rotate_dir == true { 3 } else { 5 } },
+                [false, true, true] => { if rotate_dir == true { 4 } else { 0 } },
+                [false, false, true] => { if rotate_dir == true { 5 } else { 1 } },
                 _ => {
                     /* NSN or SNS is invalid */
                     cur_bridge_state
