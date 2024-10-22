@@ -158,7 +158,7 @@ fn main() -> ! {
                 led3.set_low()
             }
 
-            let m1_hole_sensor = [m1_h1.is_high(), m1_h2.is_high(), m1_h3.is_high()];
+            let m1_hole_sensor = [m1_h3.is_high(), m1_h2.is_high(), m1_h1.is_high()];
 
             let rotate_dir: bool = true;
 
@@ -236,7 +236,7 @@ fn main() -> ! {
             /* update cur state for next loop iter */
             cur_bridge_state = req_bridge_state;
 
-            delay.delay_ms(10);
+            //delay.delay_ms(10);
         }
     }
 
