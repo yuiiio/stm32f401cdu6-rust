@@ -141,7 +141,6 @@ fn main() -> ! {
         let mut delay = dp.TIM5.delay_us(&clocks);
 
         let mut cur_bridge_state: usize = 0;
-        let mut req_bridge_state: usize = 0;
         loop {
             if m1_h1.is_high() {
                 led1.set_high()
@@ -158,24 +157,34 @@ fn main() -> ! {
             } else {
                 led3.set_low()
             }
-            /*
-            led1.set_high();
-            delay.delay_ms(1000);
-            led1.set_low();
-            led2.set_high();
-            delay.delay_ms(1000);
-            led2.set_low();
-            led3.set_high();
-            delay.delay_ms(1000);
-            led3.set_low();
-            */
+
+            let m1_hole_sensor = [m1_h1.is_high(), m1_h2.is_high(), m1_h3.is_high()];
+
+            let rotate_dir: bool = true;
+
+            /* 観測した時点で考えられる２つのパターンのうち回転方向に進んだものを採用する */
+            /* 望む回転方向が逆の場合反転して進ませる必要がある(-1して反転(-3?) */
+            let req_bridge_state: usize = match m1_hole_sensor {
+                [false, false, false] => { 0 },
+                [true, false, false] => { 1 },
+                [true, true, false] => { 2 },
+                [true, true, true] => { 3 },
+                [false, true, true] => { 4 },
+                [false, false, true] => { 5 },
+                _ => {
+                    /* NSN or SNS is invalid */
+                    cur_bridge_state
+                },
+            };
 
             /* test rotate without sensor */
+            /*
             if req_bridge_state == 5 {
                 req_bridge_state = 0;
             } else {
                 req_bridge_state += 1;
             }
+            */
             
             /* change bridge state */
             let bridge_state_diff: usize = req_bridge_state.abs_diff(cur_bridge_state);
