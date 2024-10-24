@@ -5,7 +5,7 @@
 // Halt on panic
 use panic_halt as _;
 
-use core::f32::consts::FRAC_PI_2;
+use core::f32::consts::PI;
 use cortex_m_rt::entry;
 use micromath::F32Ext;
 use stm32f4xx_hal::{
@@ -17,75 +17,12 @@ use stm32f4xx_hal::{
 
 use core::fmt::Write; // for pretty formatting of the serial output
 
-/* 14 magnetic center, 12 coil brushless motor*/
+// i16 ( 2byte ) * 360 = 720 bytes <= 96KBytes
+const SINE_RESOLUTION: usize = 360;
 
-/* ~ U U' V' V W W' U' U V V' W' W ~ */
-
-/* hole sensor in (*) <-> (*)' */
-
-/* so can take ~(S|N) N  N   (N|S) S S~
- *              ~H1   H2 H3           ~  
- *
- * if  H1:S, H2:S, H3:S 
- *      (N|S), S, S 
- *  or  S, S, (S|N)
- *
- * ex)
- * magnet rotate clock-wise
- * H1    H2    H3
- * (N|S) S     S
- * N     (N|S) S
- * N     N     (N|S)
- * (S|N) N     N
- * S     (S|N) N
- * S     S     (S|N)
- *
- * def (U, V, W) -> = N
- * if want clock-wise and get (H1:N, H2:S, H3,S), then could two pattern
- * H1    H2    H3
- * HOLE  S     S     :) V->W
- * or
- * N     HOLE  S     :) U->W
- * 
- * second get (H1:N, H2:N, H3:S), then could two pattern
- * H1    H2    H3
- * N     HOLE  S     :) U->W
- * or 
- * N     N     (HOLE):) U->V
- *  
- *  しかし、以前に切り替わったのが H2 なため、H2がホールであると判断すべきか?
- *  だが、もうH2を通過しているため、一つ進んだH3がHOLEとして制御すべきか?
- *  (VとWの中間にHOLEが来るばあい、U->WでもU->Vでも変わらない)
- *  多分先に進ませたほうが良い(センサの反応が遅れるため)
- *
- * */
-
-const BRIDGE_DEAD_TIME_US: u32 = 20;
-
-/* [U_P, V_P, W_P,
- *  U_N, V_N, W_N] */
-const BRIDGE_STATE :[[bool; 6]; 6] = [
-    /* 0 */
-    [ false, true, false, 
-    false, false, true ],
-    /* 1 */
-    [ true, false, false, 
-    false, false, true ],
-    /* 2 */
-    [ true, false, false, 
-    false, true, false ],
-    /* 3 */
-    [ false, false, true,
-    false, true, false ],
-    /* 4 */
-    [ false, false, true,
-    true, false, false ],
-    /* 5 */
-    [ false, true, false,
-    true, false, false ],
-];
-// 隣り合う同士(差-1 or 5<->0) はデッドタイムがいらない
-// ほかは、前にonになってたピンをオフにしてデッドタイムを挟む必要がある
+fn multfix15(a: i16, b: i16) -> i16 {
+    ((a as i32 * b as i32) >> 15) as i16
+}
 
 #[entry]
 fn main() -> ! {
@@ -96,6 +33,12 @@ fn main() -> ! {
             .pclk1(42.MHz())
             .pclk2(84.MHz())
             .freeze();
+
+        // should calc once
+        let mut sinewave: [i16; SINE_RESOLUTION] = [0; SINE_RESOLUTION];
+        for i in 0..SINE_RESOLUTION {
+            sinewave[i] = ((PI * 2.0 * (i as f32 / SINE_RESOLUTION as f32)).sin() as f32 * 32768.0 as f32) as i16; // float2fix15 //2^15
+        }
 
         let gpioa = dp.GPIOA.split();
         let gpiob = dp.GPIOB.split();
@@ -119,6 +62,7 @@ fn main() -> ! {
         let mut m1_w_pwm_n = pwm_c3.with(gpioa.pa10).with_complementary(gpiob.pb15);
 
         let max_duty: u16 = m1_u_pwm_n.get_max_duty();
+        let half_duty: u16 = max_duty / 2;
         //writeln!(tx, "get_max_duty: {}\r", max_duty).unwrap();
         // 20 kHz pwm has max_duty 1250 
         
@@ -190,51 +134,25 @@ fn main() -> ! {
             */
 
             /* test rotate without sensor */
-            if req_bridge_state == 5 {
+            if req_bridge_state == 359 {
                 req_bridge_state = 0;
             } else {
                 req_bridge_state += 1;
             }
+
+            let u: u16 = (half_duty as i32 + multfix15(sinewave[req_bridge_state], half_duty as i16) as i32) as u16;
+            let v: u16 = (half_duty as i32 + multfix15(sinewave[(req_bridge_state + 120) % 360], half_duty as i16) as i32) as u16;
+            let w: u16 = (half_duty as i32 + multfix15(sinewave[(req_bridge_state + 240) % 360], half_duty as i16) as i32) as u16;
             
             /* change bridge state */
-            match req_bridge_state {
-                0 => {
-                    m1_u_pwm_n.set_duty(max_duty / 2);
-                    m1_v_pwm_n.set_duty(0);
-                    m1_w_pwm_n.set_duty(max_duty);
-                },
-                1 => {
-                    m1_u_pwm_n.set_duty(0);
-                    m1_v_pwm_n.set_duty(max_duty / 2);
-                    m1_w_pwm_n.set_duty(max_duty);
-                },
-                2 => {
-                    m1_u_pwm_n.set_duty(0);
-                    m1_v_pwm_n.set_duty(max_duty);
-                    m1_w_pwm_n.set_duty(max_duty / 2);
-                },
-                3 => {
-                    m1_u_pwm_n.set_duty(max_duty / 2);
-                    m1_v_pwm_n.set_duty(max_duty);
-                    m1_w_pwm_n.set_duty(0);
-                },
-                4 => {
-                    m1_u_pwm_n.set_duty(max_duty);
-                    m1_v_pwm_n.set_duty(max_duty / 2);
-                    m1_w_pwm_n.set_duty(0);
-                },
-                5 => {
-                    m1_u_pwm_n.set_duty(max_duty);
-                    m1_v_pwm_n.set_duty(0);
-                    m1_w_pwm_n.set_duty(max_duty / 2);
-                },
-                _ => {},
-            }
+            m1_u_pwm_n.set_duty(u);
+            m1_v_pwm_n.set_duty(v);
+            m1_w_pwm_n.set_duty(w);
 
             /* update cur state for next loop iter */
             cur_bridge_state = req_bridge_state;
 
-            delay.delay_ms(5);
+            delay.delay_us(100);
         }
     }
 
