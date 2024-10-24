@@ -102,21 +102,25 @@ fn main() -> ! {
         let gpioc = dp.GPIOC.split();
         
         // define RX/TX pins
+        /*
         let tx_pin = gpiob.pb6;
         let mut tx = dp.USART1.tx(tx_pin, 9600.bps(), &clocks).unwrap();
+        */
 
         let m1_h1 = gpiob.pb0.into_floating_input();
         let m1_h2 = gpiob.pb1.into_floating_input();
         let m1_h3 = gpiob.pb2.into_floating_input();
 
-        let (mut pwm_mngr, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_us(5.micros(), &clocks);
+        let (mut pwm_mngr, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_hz(20.kHz(), &clocks);
+
         /* N-ch, P-ch */
         let mut m1_u_pwm_n = pwm_c1.with(gpioa.pa8).with_complementary(gpiob.pb13);
         let mut m1_v_pwm_n = pwm_c2.with(gpioa.pa9).with_complementary(gpiob.pb14);
         let mut m1_w_pwm_n = pwm_c3.with(gpioa.pa10).with_complementary(gpiob.pb15);
 
         let max_duty: u16 = m1_u_pwm_n.get_max_duty();
-        writeln!(tx, "get_max_duty: {}\r", max_duty).unwrap();
+        //writeln!(tx, "get_max_duty: {}\r", max_duty).unwrap();
+        // 20 kHz pwm has max_duty 1250 
         
         m1_u_pwm_n.set_polarity(Polarity::ActiveHigh);
         m1_u_pwm_n.set_complementary_polarity(Polarity::ActiveHigh);
@@ -133,9 +137,10 @@ fn main() -> ! {
         m1_v_pwm_n.enable_complementary();
         m1_w_pwm_n.enable();
         m1_w_pwm_n.enable_complementary();
-        m1_u_pwm_n.set_duty(100);
-        m1_v_pwm_n.set_duty(100);
-        m1_w_pwm_n.set_duty(100);
+        /* Nch max_duty, Pch 0*/
+        m1_u_pwm_n.set_duty(max_duty);
+        m1_v_pwm_n.set_duty(max_duty);
+        m1_w_pwm_n.set_duty(max_duty);
 
         let mut led1 = gpioa.pa6.into_push_pull_output_in_state(PinState::Low);
         let mut led2 = gpioa.pa7.into_push_pull_output_in_state(PinState::Low);
@@ -194,34 +199,34 @@ fn main() -> ! {
             /* change bridge state */
             match req_bridge_state {
                 0 => {
-                    m1_u_pwm_n.set_duty(50);
+                    m1_u_pwm_n.set_duty(max_duty / 2);
                     m1_v_pwm_n.set_duty(0);
-                    m1_w_pwm_n.set_duty(100);
+                    m1_w_pwm_n.set_duty(max_duty);
                 },
                 1 => {
                     m1_u_pwm_n.set_duty(0);
-                    m1_v_pwm_n.set_duty(50);
-                    m1_w_pwm_n.set_duty(100);
+                    m1_v_pwm_n.set_duty(max_duty / 2);
+                    m1_w_pwm_n.set_duty(max_duty);
                 },
                 2 => {
                     m1_u_pwm_n.set_duty(0);
-                    m1_v_pwm_n.set_duty(100);
-                    m1_w_pwm_n.set_duty(50);
+                    m1_v_pwm_n.set_duty(max_duty);
+                    m1_w_pwm_n.set_duty(max_duty / 2);
                 },
                 3 => {
-                    m1_u_pwm_n.set_duty(50);
-                    m1_v_pwm_n.set_duty(100);
+                    m1_u_pwm_n.set_duty(max_duty / 2);
+                    m1_v_pwm_n.set_duty(max_duty);
                     m1_w_pwm_n.set_duty(0);
                 },
                 4 => {
-                    m1_u_pwm_n.set_duty(100);
-                    m1_v_pwm_n.set_duty(50);
+                    m1_u_pwm_n.set_duty(max_duty);
+                    m1_v_pwm_n.set_duty(max_duty / 2);
                     m1_w_pwm_n.set_duty(0);
                 },
                 5 => {
-                    m1_u_pwm_n.set_duty(100);
+                    m1_u_pwm_n.set_duty(max_duty);
                     m1_v_pwm_n.set_duty(0);
-                    m1_w_pwm_n.set_duty(50);
+                    m1_w_pwm_n.set_duty(max_duty / 2);
                 },
                 _ => {},
             }
