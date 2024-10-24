@@ -12,7 +12,7 @@ use stm32f4xx_hal::{
     pac,
     prelude::*,
     gpio::{PinState, PushPull, Output, alt::TimCPin, Pin},
-    timer::pwm::PwmChannel,
+    timer::{pwm::PwmChannel, Polarity},
 };
 
 /* 14 magnetic center, 12 coil brushless motor*/
@@ -103,38 +103,30 @@ fn main() -> ! {
         let m1_h2 = gpiob.pb1.into_floating_input();
         let m1_h3 = gpiob.pb2.into_floating_input();
 
-        let (_, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_us(5.micros(), &clocks);
-        /* N-ch */
-        let mut m1_u_pwm_n = pwm_c1.with(gpioa.pa8);
-        let mut m1_v_pwm_n = pwm_c2.with(gpioa.pa9);
-        let mut m1_w_pwm_n = pwm_c3.with(gpioa.pa10);
+        let (mut pwm_mngr, (pwm_c1, pwm_c2, pwm_c3,..)) = dp.TIM1.pwm_us(5.micros(), &clocks);
+        /* N-ch, P-ch */
+        let mut m1_u_pwm_n = pwm_c1.with(gpioa.pa8).with_complementary(gpiob.pb13);
+        let mut m1_v_pwm_n = pwm_c2.with(gpioa.pa9).with_complementary(gpiob.pb14);
+        let mut m1_w_pwm_n = pwm_c3.with(gpioa.pa10).with_complementary(gpiob.pb15);
+        
+        m1_u_pwm_n.set_polarity(Polarity::ActiveHigh);
+        m1_u_pwm_n.set_complementary_polarity(Polarity::ActiveHigh);
+        m1_v_pwm_n.set_polarity(Polarity::ActiveHigh);
+        m1_v_pwm_n.set_complementary_polarity(Polarity::ActiveHigh);
+        m1_w_pwm_n.set_polarity(Polarity::ActiveHigh);
+        m1_w_pwm_n.set_complementary_polarity(Polarity::ActiveHigh);
 
-        /* P-ch */
-        let mut m1_u_p = gpioa.pa11.into_push_pull_output_in_state(PinState::Low);
-        let mut m1_v_p = gpioa.pa12.into_push_pull_output_in_state(PinState::Low);
-        let mut m1_w_p = gpioa.pa13.into_push_pull_output_in_state(PinState::Low);
-
-        m1_u_p.set_low();
-        m1_v_p.set_low();
-        m1_w_p.set_low();
-
-        /*
-        let (_, (pwm_c4, pwm_c5, pwm_c6,..)) = dp.TIM2.pwm_us(100.micros(), &clocks);
-        let mut pwm_c4 = pwm_c4.with(gpioa.pa0);
-        let mut pwm_c5 = pwm_c5.with(gpioa.pa1);
-        let mut pwm_c6 = pwm_c6.with(gpioa.pa2);
-        */
-
-        //let mut counter = dp.TIM3.counter_us(&clocks);
-        //let max_duty = m1_u.get_max_duty();
-        //counter.start(100.micros()).unwrap();
+        pwm_mngr.set_dead_time(200);
         
         m1_u_pwm_n.enable();
+        m1_u_pwm_n.enable_complementary();
         m1_v_pwm_n.enable();
+        m1_v_pwm_n.enable_complementary();
         m1_w_pwm_n.enable();
-        m1_u_pwm_n.set_duty(0);
-        m1_v_pwm_n.set_duty(0);
-        m1_w_pwm_n.set_duty(0);
+        m1_w_pwm_n.enable_complementary();
+        m1_u_pwm_n.set_duty(100);
+        m1_v_pwm_n.set_duty(100);
+        m1_w_pwm_n.set_duty(100);
 
         let mut led1 = gpioa.pa6.into_push_pull_output_in_state(PinState::Low);
         let mut led2 = gpioa.pa7.into_push_pull_output_in_state(PinState::Low);
@@ -190,50 +182,38 @@ fn main() -> ! {
             */
             
             /* change bridge state */
-            let bridge_state_diff: usize = req_bridge_state.abs_diff(cur_bridge_state);
-            if (bridge_state_diff <= 1) || bridge_state_diff == 5 {
-            } else { /* need DEADTIME */
-                m1_u_p.set_low();
-                m1_v_p.set_low();
-                m1_w_p.set_low();
-                m1_u_pwm_n.set_duty(0);
-                m1_v_pwm_n.set_duty(0);
-                m1_w_pwm_n.set_duty(0);
-
-                delay.delay_us(BRIDGE_DEAD_TIME_US);
-            }
-            let selected_bridge_state = BRIDGE_STATE[req_bridge_state];
-            /* Pch */
-            if selected_bridge_state[0] == true {
-                m1_u_p.set_high();
-            } else {
-                m1_u_p.set_low();
-            }
-            if selected_bridge_state[1] == true {
-                m1_v_p.set_high();
-            } else {
-                m1_v_p.set_low();
-            }
-            if selected_bridge_state[2] == true {
-                m1_w_p.set_high();
-            } else {
-                m1_w_p.set_low();
-            }
-            /* Nch */
-            if selected_bridge_state[3] == true {
-                m1_u_pwm_n.set_duty(5);
-            } else {
-                m1_u_pwm_n.set_duty(0);
-            }
-            if selected_bridge_state[4] == true {
-                m1_v_pwm_n.set_duty(5);
-            } else {
-                m1_v_pwm_n.set_duty(0);
-            }
-            if selected_bridge_state[5] == true {
-                m1_w_pwm_n.set_duty(5);
-            } else {
-                m1_w_pwm_n.set_duty(0);
+            match req_bridge_state {
+                0 => {
+                    m1_u_pwm_n.set_duty(50);
+                    m1_v_pwm_n.set_duty(0);
+                    m1_w_pwm_n.set_duty(100);
+                },
+                1 => {
+                    m1_u_pwm_n.set_duty(0);
+                    m1_v_pwm_n.set_duty(50);
+                    m1_w_pwm_n.set_duty(100);
+                },
+                2 => {
+                    m1_u_pwm_n.set_duty(0);
+                    m1_w_pwm_n.set_duty(100);
+                    m1_v_pwm_n.set_duty(50);
+                },
+                3 => {
+                    m1_v_pwm_n.set_duty(50);
+                    m1_w_pwm_n.set_duty(100);
+                    m1_u_pwm_n.set_duty(0);
+                },
+                4 => {
+                    m1_w_pwm_n.set_duty(100);
+                    m1_v_pwm_n.set_duty(50);
+                    m1_u_pwm_n.set_duty(0);
+                },
+                5 => {
+                    m1_w_pwm_n.set_duty(100);
+                    m1_u_pwm_n.set_duty(0);
+                    m1_v_pwm_n.set_duty(50);
+                },
+                _ => {},
             }
 
             /* update cur state for next loop iter */
