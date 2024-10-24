@@ -136,6 +136,7 @@ fn main() -> ! {
         let mut delay = dp.TIM5.delay_us(&clocks);
 
         let mut cur_bridge_state: usize = 0;
+        let mut req_bridge_state: usize = 0;
         loop {
             if m1_h1.is_high() {
                 led1.set_high()
@@ -159,7 +160,8 @@ fn main() -> ! {
 
             /* 観測した時点で考えられる２つのパターンのうち回転方向に進んだものを採用する */
             /* 望む回転方向が逆の場合反転して進ませる必要がある(-1して反転(-3?) */
-            let req_bridge_state: usize = match m1_hole_sensor {
+            /*
+            req_bridge_state = match m1_hole_sensor {
                 [false, false, false] => { if rotate_dir == true { 0 } else { 2 } },
                 [true, false, false] => { if rotate_dir == true { 1 } else { 3 } },
                 [true, true, false] => {  if rotate_dir == true { 2 } else { 4 } },
@@ -171,15 +173,14 @@ fn main() -> ! {
                     cur_bridge_state
                 },
             };
+            */
 
             /* test rotate without sensor */
-            /*
             if req_bridge_state == 5 {
                 req_bridge_state = 0;
             } else {
                 req_bridge_state += 1;
             }
-            */
             
             /* change bridge state */
             match req_bridge_state {
@@ -195,23 +196,23 @@ fn main() -> ! {
                 },
                 2 => {
                     m1_u_pwm_n.set_duty(0);
-                    m1_w_pwm_n.set_duty(100);
-                    m1_v_pwm_n.set_duty(50);
+                    m1_v_pwm_n.set_duty(100);
+                    m1_w_pwm_n.set_duty(50);
                 },
                 3 => {
-                    m1_v_pwm_n.set_duty(50);
-                    m1_w_pwm_n.set_duty(100);
-                    m1_u_pwm_n.set_duty(0);
+                    m1_u_pwm_n.set_duty(50);
+                    m1_v_pwm_n.set_duty(100);
+                    m1_w_pwm_n.set_duty(0);
                 },
                 4 => {
-                    m1_w_pwm_n.set_duty(100);
+                    m1_u_pwm_n.set_duty(100);
                     m1_v_pwm_n.set_duty(50);
-                    m1_u_pwm_n.set_duty(0);
+                    m1_w_pwm_n.set_duty(0);
                 },
                 5 => {
-                    m1_w_pwm_n.set_duty(100);
-                    m1_u_pwm_n.set_duty(0);
-                    m1_v_pwm_n.set_duty(50);
+                    m1_u_pwm_n.set_duty(100);
+                    m1_v_pwm_n.set_duty(0);
+                    m1_w_pwm_n.set_duty(50);
                 },
                 _ => {},
             }
@@ -219,7 +220,7 @@ fn main() -> ! {
             /* update cur state for next loop iter */
             cur_bridge_state = req_bridge_state;
 
-            //delay.delay_ms(10);
+            delay.delay_ms(10);
         }
     }
 
