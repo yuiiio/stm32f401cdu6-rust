@@ -15,6 +15,8 @@ use stm32f4xx_hal::{
     timer::{pwm::PwmChannel, Polarity},
 };
 
+use core::fmt::Write; // for pretty formatting of the serial output
+
 /* 14 magnetic center, 12 coil brushless motor*/
 
 /* ~ U U' V' V W W' U' U V V' W' W ~ */
@@ -98,6 +100,10 @@ fn main() -> ! {
         let gpioa = dp.GPIOA.split();
         let gpiob = dp.GPIOB.split();
         let gpioc = dp.GPIOC.split();
+        
+        // define RX/TX pins
+        let tx_pin = gpiob.pb6;
+        let mut tx = dp.USART1.tx(tx_pin, 9600.bps(), &clocks).unwrap();
 
         let m1_h1 = gpiob.pb0.into_floating_input();
         let m1_h2 = gpiob.pb1.into_floating_input();
@@ -108,6 +114,9 @@ fn main() -> ! {
         let mut m1_u_pwm_n = pwm_c1.with(gpioa.pa8).with_complementary(gpiob.pb13);
         let mut m1_v_pwm_n = pwm_c2.with(gpioa.pa9).with_complementary(gpiob.pb14);
         let mut m1_w_pwm_n = pwm_c3.with(gpioa.pa10).with_complementary(gpiob.pb15);
+
+        let max_duty: u16 = m1_u_pwm_n.get_max_duty();
+        writeln!(tx, "get_max_duty: {}\r", max_duty).unwrap();
         
         m1_u_pwm_n.set_polarity(Polarity::ActiveHigh);
         m1_u_pwm_n.set_complementary_polarity(Polarity::ActiveHigh);
@@ -220,7 +229,7 @@ fn main() -> ! {
             /* update cur state for next loop iter */
             cur_bridge_state = req_bridge_state;
 
-            delay.delay_ms(10);
+            delay.delay_ms(5);
         }
     }
 
