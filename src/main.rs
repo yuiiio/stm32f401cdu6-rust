@@ -50,6 +50,9 @@ fn main() -> ! {
         /*
         let tx_pin = gpiob.pb6;
         let mut tx = dp.USART1.tx(tx_pin, 9600.bps(), &clocks).unwrap();
+        for i in 0..SINE_RESOLUTION {
+            writeln!(tx, "{}\r", sinewave_with_third_harmonic_inj[i]).unwrap();
+        }
         */
 
         let m1_h1 = gpiob.pb0.into_floating_input();
