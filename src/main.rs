@@ -35,9 +35,11 @@ fn main() -> ! {
             .freeze();
 
         // should calc once
-        let mut sinewave: [i16; SINE_RESOLUTION] = [0; SINE_RESOLUTION];
+        let mut sinewave_with_third_harmonic_inj: [i16; SINE_RESOLUTION] = [0; SINE_RESOLUTION];
         for i in 0..SINE_RESOLUTION {
-            sinewave[i] = ((PI * 2.0 * (i as f32 / SINE_RESOLUTION as f32)).sin() as f32 * 32768.0 as f32) as i16; // float2fix15 //2^15
+            sinewave_with_third_harmonic_inj[i] = (((PI * 2.0 * (i as f32 / SINE_RESOLUTION as f32)).sin() as f32 
+                                                    + (1.0/6.0) * (3.0 * PI * 2.0 * (i as f32 / SINE_RESOLUTION as f32)).sin()
+                                                    ) * (2.0 / 3.0.sqrt()) * 32768.0 as f32) as i16; // float2fix15 //2^15
         }
 
         let gpioa = dp.GPIOA.split();
@@ -140,9 +142,9 @@ fn main() -> ! {
                 req_bridge_state += 1;
             }
 
-            let u: u16 = (half_duty as i32 + multfix15(sinewave[req_bridge_state], half_duty as i16) as i32) as u16;
-            let v: u16 = (half_duty as i32 + multfix15(sinewave[(req_bridge_state + 120) % 360], half_duty as i16) as i32) as u16;
-            let w: u16 = (half_duty as i32 + multfix15(sinewave[(req_bridge_state + 240) % 360], half_duty as i16) as i32) as u16;
+            let u: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[req_bridge_state], half_duty as i16) as i32) as u16;
+            let v: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(req_bridge_state + 120) % 360], half_duty as i16) as i32) as u16;
+            let w: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(req_bridge_state + 240) % 360], half_duty as i16) as i32) as u16;
             
             /* change bridge state */
             m1_u_pwm_n.set_duty(u);
