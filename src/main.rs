@@ -49,9 +49,9 @@ fn main() -> ! {
         let gpioc = dp.GPIOC.split();
         
         // define RX/TX pins
-        /*
         let tx_pin = gpiob.pb6;
         let mut tx = dp.USART1.tx(tx_pin, 9600.bps(), &clocks).unwrap();
+        /*
         for i in 0..SINE_RESOLUTION {
             writeln!(tx, "{}\r", sinewave_with_third_harmonic_inj[i]).unwrap();
         }
@@ -100,7 +100,10 @@ fn main() -> ! {
         error_led.set_low();
         let mut delay = dp.TIM5.delay_us(&clocks);
 
-        let mut cur_bridge_state: usize = 0;
+        let mut pre_hole_sensor_state: u16 = 6; // 0~5, 6 is invalid
+
+        let mut debug_counter: i32 = 0;
+
         let mut req_bridge_state: usize = 0;
         loop {
             if m1_h1.is_high() {
@@ -125,20 +128,53 @@ fn main() -> ! {
 
             /* 観測した時点で考えられる２つのパターンのうち回転方向に進んだものを採用する */
             /* 望む回転方向が逆の場合反転して進ませる必要がある(-1して反転(-3?) */
-            /*
-            req_bridge_state = match m1_hole_sensor {
-                [false, false, false] => { if rotate_dir == true { 0 } else { 2 } },
-                [true, false, false] => { if rotate_dir == true { 1 } else { 3 } },
-                [true, true, false] => {  if rotate_dir == true { 2 } else { 4 } },
-                [true, true, true] => { if rotate_dir == true { 3 } else { 5 } },
-                [false, true, true] => { if rotate_dir == true { 4 } else { 0 } },
-                [false, false, true] => { if rotate_dir == true { 5 } else { 1 } },
+            
+            let now_hole_sensor_state: u16 = match m1_hole_sensor {
+                [false, false, false] => { 0 },
+                [true, false, false] => { 1 },
+                [true, true, false] => { 2 },
+                [true, true, true] => { 3 },
+                [false, true, true] => { 4 },
+                [false, false, true] => { 5 },
                 _ => {
                     /* NSN or SNS is invalid */
-                    cur_bridge_state
+                    6
                 },
             };
+
+            /* *now - pre
+                               5  4  3  2  1  *  5  4  3
+                               4  3  2  1  * -1  4  3
+                               3  2  1  * -1 -2  3
+                           -3  2  1  * -1 -2 -3
+                        -3 -4  1  * -1 -2
+                     -3 -4 -5  * -1 -2
+            ~0  1  2  3  4  5  0  1  2  3  4  5  0  1  2  3  4~
+
+            3なら無視、-4以下なら+6, 4以上なら-6
+            有効範囲(+2, +1, 0, -1, -2)
             */
+            let relative_diff: i32 = match now_hole_sensor_state {
+                6 => { 0 },
+                _ => { 
+                    let diff = now_hole_sensor_state as i32 - pre_hole_sensor_state as i32;
+                    if diff == 3 {
+                        0
+                    } else {
+                        if diff >= 4 {
+                            diff - 6
+                        } else if diff <= -4 {
+                            diff + 6
+                        } else {
+                            diff
+                        }
+                    }
+                },
+            };
+
+            debug_counter += relative_diff;
+
+            writeln!(tx, "{}\r", debug_counter).unwrap();
 
             /* test rotate without sensor */
             // 360 < 8bit, so can shift max 32-8 = 24
@@ -162,7 +198,7 @@ fn main() -> ! {
             m1_w_pwm_n.set_duty(w);
 
             /* update cur state for next loop iter */
-            cur_bridge_state = req_bridge_state;
+            pre_hole_sensor_state = now_hole_sensor_state;
 
             //delay.delay_us(100);
         }
