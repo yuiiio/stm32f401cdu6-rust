@@ -100,15 +100,9 @@ fn main() -> ! {
         error_led.set_low();
         let mut delay = dp.TIM5.delay_us(&clocks);
 
-        let mut pre_hole_sensor_state: usize = 6; // 0~5, 6 is invalid
-
+        let mut cur_bridge_state: usize = 0;
         let mut req_bridge_state: usize = 0;
-        let mut target_state_diff: usize = 0;
-
-        let mut speed: usize = 1; // min = 1
         loop {
-            let rotate_dir: bool = true;
-            
             if m1_h1.is_high() {
                 led1.set_high()
             } else {
@@ -126,70 +120,35 @@ fn main() -> ! {
             }
 
             let m1_hole_sensor = [m1_h3.is_high(), m1_h2.is_high(), m1_h1.is_high()];
-            let now_hole_sensor_state = match m1_hole_sensor {
-                [false, false, false] => { 0 },
-                [true, false, false] => { 1 },
-                [true, true, false] => { 2 },
-                [true, true, true] => { 3 },
-                [false, true, true] => { 4 },
-                [false, false, true] => { 5 },
+
+            let rotate_dir: bool = false;
+
+            /* 観測した時点で考えられる２つのパターンのうち回転方向に進んだものを採用する */
+            /* 望む回転方向が逆の場合反転して進ませる必要がある(-1して反転(-3?) */
+            /*
+            req_bridge_state = match m1_hole_sensor {
+                [false, false, false] => { if rotate_dir == true { 0 } else { 2 } },
+                [true, false, false] => { if rotate_dir == true { 1 } else { 3 } },
+                [true, true, false] => {  if rotate_dir == true { 2 } else { 4 } },
+                [true, true, true] => { if rotate_dir == true { 3 } else { 5 } },
+                [false, true, true] => { if rotate_dir == true { 4 } else { 0 } },
+                [false, false, true] => { if rotate_dir == true { 5 } else { 1 } },
                 _ => {
-                    pre_hole_sensor_state  // or 6: invalid ?
                     /* NSN or SNS is invalid */
+                    cur_bridge_state
                 },
             };
+            */
 
+            /* test rotate without sensor */
             // 360 < 8bit, so can shift max 32-8 = 24
-            const SCALE: usize = 7; // <= 24 // > MIN_SPEED ?
+            const SCALE: usize = 6; // <= 24
             const COUNTER_MAX: usize = (SINE_RESOLUTION << SCALE) - 1;
-            const COUNTER_MAX_DIV_6: usize = COUNTER_MAX / 6;
-           
-            let delay_roter_need_speed_down = target_state_diff > COUNTER_MAX_DIV_6;
-            if (now_hole_sensor_state != pre_hole_sensor_state) || delay_roter_need_speed_down {
-                if delay_roter_need_speed_down {
-                    speed = speed.saturating_sub(1);
-                    if speed == 0 {
-                        speed = 1; // min = 1
-                    }
-                } else {
-                    // need speed up?
-                    speed += 1;
-                }
-
-                /* 観測した時点で考えられる２つのパターンのうち */
-                req_bridge_state =
-                    if rotate_dir == false {
-                        if now_hole_sensor_state == 5 {
-                            0
-                        } else {
-                            COUNTER_MAX_DIV_6 * (now_hole_sensor_state + 1)
-                        }
-                    } else {
-                        COUNTER_MAX_DIV_6 * now_hole_sensor_state
-                    };
-                target_state_diff = 0;
-            }
-
-            /* maybe not need MAX, 0 if because sensor feedback and re scale */
-            if rotate_dir == true {
-                if req_bridge_state >= COUNTER_MAX {
-                    req_bridge_state = 0;
-                } else {
-                    req_bridge_state += speed;
-                    /* to avoid out of access */
-                    if req_bridge_state > COUNTER_MAX {
-                        req_bridge_state = COUNTER_MAX;
-                    }
-                }
+            if req_bridge_state == COUNTER_MAX {
+                req_bridge_state = 0;
             } else {
-                if req_bridge_state < speed {
-                    req_bridge_state = COUNTER_MAX;
-                } else {
-                    req_bridge_state -= speed;
-                }
+                req_bridge_state += 1;
             }
-
-            target_state_diff += 1;
 
             let shift_in_sine_res = req_bridge_state >> SCALE;
 
@@ -203,7 +162,7 @@ fn main() -> ! {
             m1_w_pwm_n.set_duty(w);
 
             /* update cur state for next loop iter */
-            pre_hole_sensor_state = now_hole_sensor_state;
+            cur_bridge_state = req_bridge_state;
 
             //delay.delay_us(100);
         }
