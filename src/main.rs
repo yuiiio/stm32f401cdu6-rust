@@ -142,7 +142,7 @@ fn main() -> ! {
 
             /* test rotate without sensor */
             // 360 < 8bit, so can shift max 32-8 = 24
-            const SCALE: usize = 6; // <= 24
+            const SCALE: usize = 4; // <= 24
             const COUNTER_MAX: usize = (SINE_RESOLUTION << SCALE) - 1;
             if req_bridge_state == COUNTER_MAX {
                 req_bridge_state = 0;
