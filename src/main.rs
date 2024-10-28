@@ -19,6 +19,8 @@ use core::fmt::Write; // for pretty formatting of the serial output
 
 // i16 ( 2byte ) * 360 = 720 bytes <= 96KBytes
 const SINE_RESOLUTION: usize = 360;
+const SINE_RES_1_DIV_3: usize = SINE_RESOLUTION / 3;
+const SINE_RES_2_DIV_3: usize = 2 * SINE_RESOLUTION / 3;
 
 fn multfix15(a: i16, b: i16) -> i16 {
     ((a as i32 * b as i32) >> 15) as i16
@@ -141,7 +143,8 @@ fn main() -> ! {
             /* test rotate without sensor */
             // 360 < 8bit, so can shift max 32-8 = 24
             const SCALE: usize = 6; // <= 24
-            if req_bridge_state == (SINE_RESOLUTION << SCALE) - 1 {
+            const COUNTER_MAX: usize = (SINE_RESOLUTION << SCALE) - 1;
+            if req_bridge_state == COUNTER_MAX {
                 req_bridge_state = 0;
             } else {
                 req_bridge_state += 1;
@@ -150,8 +153,8 @@ fn main() -> ! {
             let shift_in_sine_res = req_bridge_state >> SCALE;
 
             let u: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[shift_in_sine_res], half_duty as i16) as i32) as u16;
-            let v: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(shift_in_sine_res + 120) % 360], half_duty as i16) as i32) as u16;
-            let w: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(shift_in_sine_res + 240) % 360], half_duty as i16) as i32) as u16;
+            let v: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(shift_in_sine_res + SINE_RES_1_DIV_3) % SINE_RESOLUTION], half_duty as i16) as i32) as u16;
+            let w: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(shift_in_sine_res + SINE_RES_2_DIV_3) % SINE_RESOLUTION], half_duty as i16) as i32) as u16;
             
             /* change bridge state */
             m1_u_pwm_n.set_duty(u);
