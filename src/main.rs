@@ -140,14 +140,14 @@ fn main() -> ! {
             };
 
             // 360 < 8bit, so can shift max 32-8 = 24
-            const SCALE: usize = 12; // <= 24 // > MIN_SPEED ?
+            const SCALE: usize = 7; // <= 24 // > MIN_SPEED ?
             const COUNTER_MAX: usize = (SINE_RESOLUTION << SCALE) - 1;
             const COUNTER_MAX_DIV_6: usize = COUNTER_MAX / 6;
            
             let delay_roter_need_speed_down = target_state_diff > COUNTER_MAX_DIV_6;
             if (now_hole_sensor_state != pre_hole_sensor_state) || delay_roter_need_speed_down {
                 if delay_roter_need_speed_down {
-                    speed = speed.saturating_sub(4);
+                    speed = speed.saturating_sub(1);
                     if speed == 0 {
                         speed = 1; // min = 1
                     }
@@ -159,7 +159,11 @@ fn main() -> ! {
                 /* 観測した時点で考えられる２つのパターンのうち */
                 req_bridge_state =
                     if rotate_dir == false {
-                        COUNTER_MAX_DIV_6 * (now_hole_sensor_state + 1)
+                        if now_hole_sensor_state == 5 {
+                            0
+                        } else {
+                            COUNTER_MAX_DIV_6 * (now_hole_sensor_state + 1)
+                        }
                     } else {
                         COUNTER_MAX_DIV_6 * now_hole_sensor_state
                     };
@@ -172,6 +176,10 @@ fn main() -> ! {
                     req_bridge_state = 0;
                 } else {
                     req_bridge_state += speed;
+                    /* to avoid out of access */
+                    if req_bridge_state > COUNTER_MAX {
+                        req_bridge_state = COUNTER_MAX;
+                    }
                 }
             } else {
                 if req_bridge_state < speed {
@@ -182,11 +190,6 @@ fn main() -> ! {
             }
 
             target_state_diff += 1;
-
-            /* to avoid out of access */
-            if req_bridge_state > COUNTER_MAX {
-                req_bridge_state = COUNTER_MAX;
-            }
 
             let shift_in_sine_res = req_bridge_state >> SCALE;
 
