@@ -139,15 +139,19 @@ fn main() -> ! {
             */
 
             /* test rotate without sensor */
-            if req_bridge_state == 359 {
+            // 360 < 8bit, so can shift max 32-8 = 24
+            const SCALE: usize = 6; // <= 24
+            if req_bridge_state == (SINE_RESOLUTION << SCALE) - 1 {
                 req_bridge_state = 0;
             } else {
                 req_bridge_state += 1;
             }
 
-            let u: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[req_bridge_state], half_duty as i16) as i32) as u16;
-            let v: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(req_bridge_state + 120) % 360], half_duty as i16) as i32) as u16;
-            let w: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(req_bridge_state + 240) % 360], half_duty as i16) as i32) as u16;
+            let shift_in_sine_res = req_bridge_state >> SCALE;
+
+            let u: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[shift_in_sine_res], half_duty as i16) as i32) as u16;
+            let v: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(shift_in_sine_res + 120) % 360], half_duty as i16) as i32) as u16;
+            let w: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(shift_in_sine_res + 240) % 360], half_duty as i16) as i32) as u16;
             
             /* change bridge state */
             m1_u_pwm_n.set_duty(u);
@@ -157,7 +161,7 @@ fn main() -> ! {
             /* update cur state for next loop iter */
             cur_bridge_state = req_bridge_state;
 
-            delay.delay_us(100);
+            //delay.delay_us(100);
         }
     }
 
