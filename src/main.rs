@@ -131,7 +131,7 @@ fn main() -> ! {
 
             let rotate_dir: bool = false;
 
-            /* 観測した時点で考えられる２つのパターンのうち回転方向に進んだものを採用する */
+            /* 観測した時点で考えられる２つのパターンのうち */
             /* 望む回転方向が逆の場合反転して進ませる必要がある(-1して反転(-3?) */
             
             let now_hole_sensor_state: u16 = match m1_hole_sensor {
@@ -200,15 +200,30 @@ fn main() -> ! {
             const COUNTER_MAX_DIV6: usize = COUNTER_MAX / 6;
 
             count_timer += 1;
-            if count_timer % (COUNTER_MAX_DIV6 * 2) == 0 {
-                let diff = debug_counter - pre_debug_counter;
-                if diff >= 2 {
+            if count_timer % (COUNTER_MAX_DIV6 * 3) == 0 {
+                let diff = pre_debug_counter - debug_counter ;
+                if diff >= 3 {
+                    speed += 2;
+                    if speed >= 30 {
+                        speed = 30;
+                    }
+                } else if diff == 2 {
+                    //speed += 1;
                     speed = speed.saturating_sub(1);
+                    if speed >= 30 {
+                        speed = 30;
+                    }
+                } else if diff == 1 {
+                    speed = speed.saturating_sub(2);
                     if speed == 0 {
                         speed = 1;
                     }
                 } else {
-                    speed += 1;
+                    //speed = speed.saturating_sub(10);
+                    speed = speed >> 1;// / 2
+                    if speed == 0 {
+                        speed = 1;
+                    }
                 }
                 pre_debug_counter = debug_counter;
             }
