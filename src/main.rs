@@ -103,6 +103,7 @@ fn main() -> ! {
         let mut pre_hole_sensor_state: u16 = 6; // 0~5, 6 is invalid
 
         let mut debug_counter: i32 = 0;
+        let mut debug_wait: u32 = 0;
 
         let mut req_bridge_state: usize = 0;
         loop {
@@ -122,7 +123,7 @@ fn main() -> ! {
                 led3.set_low()
             }
 
-            let m1_hole_sensor = [m1_h3.is_high(), m1_h2.is_high(), m1_h1.is_high()];
+            let m1_hole_sensor = [m1_h1.is_low(), m1_h2.is_low(), m1_h3.is_low()];
 
             let rotate_dir: bool = false;
 
@@ -154,11 +155,11 @@ fn main() -> ! {
             3なら無視、-4以下なら+6, 4以上なら-6
             有効範囲(+2, +1, 0, -1, -2)
             */
-            let relative_diff: i32 = match now_hole_sensor_state {
+            let mut relative_diff: i32 = match now_hole_sensor_state {
                 6 => { 0 },
                 _ => { 
                     let diff = now_hole_sensor_state as i32 - pre_hole_sensor_state as i32;
-                    if diff == 3 {
+                    if diff == 3 || diff == -3 {
                         0
                     } else {
                         if diff >= 4 {
@@ -172,9 +173,17 @@ fn main() -> ! {
                 },
             };
 
+            /* -1 , +1 だけ使う */
+            if relative_diff >= 2 || relative_diff <= -2 {
+                relative_diff = 0;
+            }
+
             debug_counter += relative_diff;
 
-            writeln!(tx, "{}\r", debug_counter).unwrap();
+            debug_wait += 1;
+            if debug_wait % (1 << 15) == 0 { // every time then drop sensor count
+                writeln!(tx, "{}\r", debug_counter).unwrap();
+            }
 
             /* test rotate without sensor */
             // 360 < 8bit, so can shift max 32-8 = 24
