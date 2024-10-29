@@ -48,10 +48,10 @@ fn main() -> ! {
         let gpiob = dp.GPIOB.split();
         let gpioc = dp.GPIOC.split();
         
+        /*
         // define RX/TX pins
         let tx_pin = gpiob.pb6;
         let mut tx = dp.USART1.tx(tx_pin, 9600.bps(), &clocks).unwrap();
-        /*
         for i in 0..SINE_RESOLUTION {
             writeln!(tx, "{}\r", sinewave_with_third_harmonic_inj[i]).unwrap();
         }
@@ -103,7 +103,11 @@ fn main() -> ! {
         let mut pre_hole_sensor_state: u16 = 6; // 0~5, 6 is invalid
 
         let mut debug_counter: i32 = 0;
-        let mut debug_wait: u32 = 0;
+        let mut pre_debug_counter: i32 = 0;
+
+        let mut count_timer: usize = 0;
+
+        let mut speed: usize = 1;
 
         let mut req_bridge_state: usize = 0;
         loop {
@@ -155,7 +159,7 @@ fn main() -> ! {
             3なら無視、-4以下なら+6, 4以上なら-6
             有効範囲(+2, +1, 0, -1, -2)
             */
-            let mut relative_diff: i32 = match now_hole_sensor_state {
+            let relative_diff: i32 = match now_hole_sensor_state {
                 6 => { 0 },
                 _ => { 
                     let diff = now_hole_sensor_state as i32 - pre_hole_sensor_state as i32;
@@ -174,26 +178,43 @@ fn main() -> ! {
             };
 
             /* -1 , +1 だけ使う */
+            /*
             if relative_diff >= 2 || relative_diff <= -2 {
                 relative_diff = 0;
             }
+            */
 
             debug_counter += relative_diff;
 
+            /*
             debug_wait += 1;
             if debug_wait % (1 << 15) == 0 { // every time then drop sensor count
                 writeln!(tx, "{}\r", debug_counter).unwrap();
             }
+            */
 
             /* test rotate without sensor */
             // 360 < 8bit, so can shift max 32-8 = 24
-            const SCALE: usize = 4; // <= 24
+            const SCALE: usize = 8; // <= 24
             const COUNTER_MAX: usize = (SINE_RESOLUTION << SCALE) - 1;
-            if req_bridge_state == COUNTER_MAX {
-                req_bridge_state = 0;
-            } else {
-                req_bridge_state += 1;
+            const COUNTER_MAX_DIV6: usize = COUNTER_MAX / 6;
+
+            count_timer += 1;
+            if count_timer % (COUNTER_MAX_DIV6 * 2) == 0 {
+                let diff = debug_counter - pre_debug_counter;
+                if diff >= 2 {
+                    speed = speed.saturating_sub(1);
+                    if speed == 0 {
+                        speed = 1;
+                    }
+                } else {
+                    speed += 1;
+                }
+                pre_debug_counter = debug_counter;
             }
+
+            req_bridge_state += speed;
+            req_bridge_state = req_bridge_state % COUNTER_MAX;
 
             let shift_in_sine_res = req_bridge_state >> SCALE;
 
