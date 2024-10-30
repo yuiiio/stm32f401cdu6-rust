@@ -252,7 +252,7 @@ fn main() -> ! {
                 } else {
                     stop_counter - debug_counter
                 };
-                if diff <= 0 {
+                if diff <= 1 {
                     speed = 1;
                 }
                 stop_counter = debug_counter;
