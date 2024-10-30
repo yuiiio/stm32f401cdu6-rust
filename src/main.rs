@@ -207,9 +207,9 @@ fn main() -> ! {
             count_timer += 1;
             if count_timer % (COUNTER_MAX_DIV6 * 3) == 0 {
                 let diff = if rotate_dir == true {
-                    debug_counter - pre_debug_counter
-                } else {
                     pre_debug_counter - debug_counter
+                } else {
+                    debug_counter - pre_debug_counter
                 };
 
                 if diff >= 3 {
@@ -248,9 +248,9 @@ fn main() -> ! {
 
             if count_timer % (COUNTER_MAX_DIV6 * 6) == 0 {
                 let diff = if rotate_dir == true {
-                    debug_counter - stop_counter
-                } else {
                     stop_counter - debug_counter
+                } else {
+                    debug_counter - stop_counter
                 };
                 if diff <= 1 {
                     speed = 1;
