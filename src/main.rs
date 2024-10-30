@@ -204,7 +204,7 @@ fn main() -> ! {
                 let diff = if rotate_dir == true {
                     pre_debug_counter - debug_counter
                 } else {
-                    debug_counter - pre_debug_counter
+                    debug_counter - pre_debug_counter + 1
                 };
 
                 if diff >= 3 {
@@ -230,8 +230,13 @@ fn main() -> ! {
                         speed = 1;
                     }
                 }
+                // 回転方向が反転した場合はカウンターをリセットする必要がある?
+                // もしくは、回転の切り替えは count_timer % (COUNTER_MAX_DIV6 * 3) ==
+                // 0　のタイミングで行うか?
                 pre_debug_counter = debug_counter;
             }
+
+            //speed = 10;
 
             req_bridge_state += speed;
             req_bridge_state = req_bridge_state % COUNTER_MAX;
