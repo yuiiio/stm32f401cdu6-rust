@@ -104,6 +104,7 @@ fn main() -> ! {
 
         let mut debug_counter: i32 = 0;
         let mut pre_debug_counter: i32 = 0;
+        let mut stop_counter: i32 = 0;
 
         let mut count_timer: usize = 0;
 
@@ -222,19 +223,19 @@ fn main() -> ! {
                     if speed >= 30 {
                         speed = 30;
                     }
-                    */
                     speed = speed.saturating_sub(1);
                     if speed == 0 {
                         speed = 1;
                     }
+                    */
                 } else if diff == 1 {
-                    speed = speed.saturating_sub(2);
+                    speed = speed.saturating_sub(1);
                     if speed == 0 {
                         speed = 1;
                     }
                 } else {
-                    //speed = speed.saturating_sub(10);
-                    speed = speed >> 1;// / 2
+                    speed = speed.saturating_sub(2);
+                    //speed = speed >> 1;// / 2
                     if speed == 0 {
                         speed = 1;
                     }
@@ -243,6 +244,18 @@ fn main() -> ! {
                 // もしくは、回転の切り替えは count_timer % (COUNTER_MAX_DIV6 * 3) ==
                 // 0　のタイミングで行うか?
                 pre_debug_counter = debug_counter;
+            }
+
+            if count_timer % (COUNTER_MAX_DIV6 * 6) == 0 {
+                let diff = if rotate_dir == true {
+                    debug_counter - stop_counter
+                } else {
+                    stop_counter - debug_counter
+                };
+                if diff <= 0 {
+                    speed = 1;
+                }
+                stop_counter = debug_counter;
             }
 
             //speed = 10;
