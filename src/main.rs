@@ -143,7 +143,8 @@ fn main() -> ! {
                 [false, false, true] => { 5 },
                 _ => {
                     /* NSN or SNS is invalid */
-                    6
+                    pre_hole_sensor_state
+                    //6
                 },
             };
 
@@ -159,19 +160,23 @@ fn main() -> ! {
             3なら無視、-4以下なら+6, 4以上なら-6
             有効範囲(+2, +1, 0, -1, -2)
             */
-            let relative_diff: i32 = match now_hole_sensor_state {
+            let mut relative_diff: i32 = match now_hole_sensor_state {
                 6 => { 0 },
                 _ => { 
-                    let diff = now_hole_sensor_state as i32 - pre_hole_sensor_state as i32;
-                    if diff == 3 || diff == -3 {
+                    if pre_hole_sensor_state == 6 {
                         0
                     } else {
-                        if diff >= 4 {
-                            diff - 6
-                        } else if diff <= -4 {
-                            diff + 6
+                        let diff = now_hole_sensor_state as i32 - pre_hole_sensor_state as i32;
+                        if diff == 3 || diff == -3 {
+                            0
                         } else {
-                            diff
+                            if diff >= 4 {
+                                diff - 6
+                            } else if diff <= -4 {
+                                diff + 6
+                            } else {
+                                diff
+                            }
                         }
                     }
                 },
@@ -187,8 +192,7 @@ fn main() -> ! {
             debug_counter += relative_diff;
 
             /*
-            debug_wait += 1;
-            if debug_wait % (1 << 15) == 0 { // every time then drop sensor count
+            if count_timer % (1 << 17) == 0 { // every time then drop sensor count
                 writeln!(tx, "{}\r", debug_counter).unwrap();
             }
             */
@@ -202,9 +206,9 @@ fn main() -> ! {
             count_timer += 1;
             if count_timer % (COUNTER_MAX_DIV6 * 3) == 0 {
                 let diff = if rotate_dir == true {
-                    pre_debug_counter - debug_counter
+                    debug_counter - pre_debug_counter
                 } else {
-                    debug_counter - pre_debug_counter + 1
+                    pre_debug_counter - debug_counter
                 };
 
                 if diff >= 3 {
@@ -213,10 +217,15 @@ fn main() -> ! {
                         speed = 30;
                     }
                 } else if diff == 2 {
-                    //speed += 1;
-                    speed = speed.saturating_sub(1);
+                    /*
+                    speed += 1;
                     if speed >= 30 {
                         speed = 30;
+                    }
+                    */
+                    speed = speed.saturating_sub(1);
+                    if speed == 0 {
+                        speed = 1;
                     }
                 } else if diff == 1 {
                     speed = speed.saturating_sub(2);
