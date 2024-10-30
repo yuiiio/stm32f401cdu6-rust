@@ -201,7 +201,12 @@ fn main() -> ! {
 
             count_timer += 1;
             if count_timer % (COUNTER_MAX_DIV6 * 3) == 0 {
-                let diff = pre_debug_counter - debug_counter ;
+                let diff = if rotate_dir == true {
+                    pre_debug_counter - debug_counter
+                } else {
+                    debug_counter - pre_debug_counter
+                };
+
                 if diff >= 3 {
                     speed += 2;
                     if speed >= 30 {
@@ -236,6 +241,12 @@ fn main() -> ! {
             let u: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[shift_in_sine_res], half_duty as i16) as i32) as u16;
             let v: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(shift_in_sine_res + SINE_RES_1_DIV_3) % SINE_RESOLUTION], half_duty as i16) as i32) as u16;
             let w: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(shift_in_sine_res + SINE_RES_2_DIV_3) % SINE_RESOLUTION], half_duty as i16) as i32) as u16;
+
+            let (v, w) = if rotate_dir == true { 
+                (v, w)
+            } else {
+                (w, v)
+            };
             
             /* change bridge state */
             m1_u_pwm_n.set_duty(u);
