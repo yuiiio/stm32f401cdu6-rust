@@ -263,17 +263,16 @@ fn main() -> ! {
             req_bridge_state += speed;
             req_bridge_state = req_bridge_state % COUNTER_MAX;
 
-            let shift_in_sine_res = req_bridge_state >> SCALE;
+            let shift_in_sine_res = 
+                if rotate_dir == true { 
+                    req_bridge_state >> SCALE
+                } else {
+                    (SINE_RESOLUTION - 1) - (req_bridge_state >> SCALE)
+                };
 
             let u: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[shift_in_sine_res], half_duty as i16) as i32) as u16;
             let v: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(shift_in_sine_res + SINE_RES_1_DIV_3) % SINE_RESOLUTION], half_duty as i16) as i32) as u16;
             let w: u16 = (half_duty as i32 + multfix15(sinewave_with_third_harmonic_inj[(shift_in_sine_res + SINE_RES_2_DIV_3) % SINE_RESOLUTION], half_duty as i16) as i32) as u16;
-
-            let (v, w) = if rotate_dir == true { 
-                (v, w)
-            } else {
-                (w, v)
-            };
             
             /* change bridge state */
             m1_u_pwm_n.set_duty(u);
