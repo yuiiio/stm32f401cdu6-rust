@@ -214,8 +214,8 @@ fn main() -> ! {
 
                 if diff >= 3 {
                     speed += 2;
-                    if speed >= 30 {
-                        speed = 30;
+                    if speed >= 50 {
+                        speed = 50;
                     }
                 } else if diff == 2 {
                     /*
@@ -223,18 +223,18 @@ fn main() -> ! {
                     if speed >= 30 {
                         speed = 30;
                     }
-                    speed = speed.saturating_sub(1);
+                    */
+                    speed = speed.saturating_sub(10);
                     if speed == 0 {
                         speed = 1;
                     }
-                    */
                 } else if diff == 1 {
-                    speed = speed.saturating_sub(1);
+                    speed = speed.saturating_sub(20);
                     if speed == 0 {
                         speed = 1;
                     }
                 } else {
-                    speed = speed.saturating_sub(2);
+                    speed = speed.saturating_sub(30);
                     //speed = speed >> 1;// / 2
                     if speed == 0 {
                         speed = 1;
