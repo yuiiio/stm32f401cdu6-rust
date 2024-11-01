@@ -106,7 +106,7 @@ fn main() -> ! {
         let mut pre_debug_counter: i32 = 0;
         let mut stop_counter: i32 = 0;
 
-        let mut count_timer: usize = 0;
+        //let mut count_timer: usize = 0;
 
         let mut speed: usize = 1;
 
@@ -200,14 +200,15 @@ fn main() -> ! {
 
             /* test rotate without sensor */
             // 360 < 8bit, so can shift max 32-8 = 24
-            const SCALE: usize = 12; // <= 24
+            const SCALE: usize = 9; // <= 24
             const COUNTER_MAX: usize = (SINE_RESOLUTION << SCALE) - 1;
             const COUNTER_MAX_DIV6: usize = COUNTER_MAX / 6;
             const COUNTER_MAX_DIV12: usize = COUNTER_MAX / 12;
 
-            count_timer += 1;
+            //count_timer += 1;
             
-            if count_timer % COUNTER_MAX_DIV6 == 0 {
+            /*
+            if req_bridge_state % (COUNTER_MAX_DIV6 * 3) == 0 {
 
                 let diff = if rotate_dir == true {
                     req_bridge_state = (COUNTER_MAX_DIV6 * now_hole_sensor_state as usize) + COUNTER_MAX_DIV12;
@@ -217,7 +218,7 @@ fn main() -> ! {
                     debug_counter - pre_debug_counter
                 };
 
-                if diff >= 1 {
+                if diff >= 2 {
                     speed += 1;
                     if speed >= 30 {
                         speed = 30;
@@ -232,9 +233,10 @@ fn main() -> ! {
 
                 pre_debug_counter = debug_counter;
             }
+            */
 
-            /*
-            if count_timer % (COUNTER_MAX_DIV6 * 3) == 0 {
+            
+            if req_bridge_state % (COUNTER_MAX_DIV6 * 3) == 0 {
                 let diff = if rotate_dir == true {
                     pre_debug_counter - debug_counter
                 } else {
@@ -275,7 +277,7 @@ fn main() -> ! {
                 pre_debug_counter = debug_counter;
             }
 
-            if count_timer % (COUNTER_MAX_DIV6 * 6) == 0 {
+            if req_bridge_state % (COUNTER_MAX_DIV6 * 6) == 0 {
                 let diff = if rotate_dir == true {
                     stop_counter - debug_counter
                 } else {
@@ -286,7 +288,6 @@ fn main() -> ! {
                 }
                 stop_counter = debug_counter;
             }
-            */
 
             //speed = 10;
 
