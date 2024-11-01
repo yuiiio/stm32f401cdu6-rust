@@ -106,9 +106,11 @@ fn main() -> ! {
         let mut pre_debug_counter: i32 = 0;
         let mut stop_counter: i32 = 0;
 
-        //let mut count_timer: usize = 0;
+        let mut count_timer: usize = 0;
 
         let mut speed: usize = 1;
+
+        let mut bridge_count: usize = 0;
 
         let mut req_bridge_state: usize = 0;
         loop {
@@ -197,18 +199,18 @@ fn main() -> ! {
                 writeln!(tx, "{}\r", debug_counter).unwrap();
             }
             */
+            //count_timer += 1;
 
             /* test rotate without sensor */
             // 360 < 8bit, so can shift max 32-8 = 24
-            const SCALE: usize = 9; // <= 24
+            const SCALE: usize = 8; // <= 24
             const COUNTER_MAX: usize = (SINE_RESOLUTION << SCALE) - 1;
             const COUNTER_MAX_DIV6: usize = COUNTER_MAX / 6;
             const COUNTER_MAX_DIV12: usize = COUNTER_MAX / 12;
 
-            //count_timer += 1;
             
             /*
-            if req_bridge_state % (COUNTER_MAX_DIV6 * 3) == 0 {
+            if bridge_count >= (COUNTER_MAX_DIV6 * 2) {
 
                 let diff = if rotate_dir == true {
                     req_bridge_state = (COUNTER_MAX_DIV6 * now_hole_sensor_state as usize) + COUNTER_MAX_DIV12;
@@ -218,7 +220,7 @@ fn main() -> ! {
                     debug_counter - pre_debug_counter
                 };
 
-                if diff >= 2 {
+                if diff >= 1 {
                     speed += 1;
                     if speed >= 30 {
                         speed = 30;
@@ -232,11 +234,11 @@ fn main() -> ! {
                 }
 
                 pre_debug_counter = debug_counter;
+                bridge_count = 0;
             }
             */
 
-            
-            if req_bridge_state % (COUNTER_MAX_DIV6 * 3) == 0 {
+            if bridge_count >= (COUNTER_MAX_DIV6 * 3) {
                 let diff = if rotate_dir == true {
                     pre_debug_counter - debug_counter
                 } else {
@@ -254,18 +256,18 @@ fn main() -> ! {
                     if speed >= 30 {
                         speed = 30;
                     }
-                    */
-                    speed = speed.saturating_sub(10);
+                    speed = speed.saturating_sub(1);
                     if speed == 0 {
                         speed = 1;
                     }
+                    */
                 } else if diff == 1 {
-                    speed = speed.saturating_sub(20);
+                    speed = speed.saturating_sub(2);
                     if speed == 0 {
                         speed = 1;
                     }
                 } else {
-                    speed = speed.saturating_sub(30);
+                    speed = speed.saturating_sub(3);
                     //speed = speed >> 1;// / 2
                     if speed == 0 {
                         speed = 1;
@@ -275,9 +277,10 @@ fn main() -> ! {
                 // もしくは、回転の切り替えは count_timer % (COUNTER_MAX_DIV6 * 3) ==
                 // 0　のタイミングで行うか?
                 pre_debug_counter = debug_counter;
+                bridge_count = 0;
             }
 
-            if req_bridge_state % (COUNTER_MAX_DIV6 * 6) == 0 {
+            if bridge_count >= (COUNTER_MAX_DIV6 * 6) {
                 let diff = if rotate_dir == true {
                     stop_counter - debug_counter
                 } else {
@@ -287,11 +290,13 @@ fn main() -> ! {
                     speed = 1;
                 }
                 stop_counter = debug_counter;
+                bridge_count = 0;
             }
 
             //speed = 10;
 
             req_bridge_state += speed;
+            bridge_count += speed;
             req_bridge_state = req_bridge_state % COUNTER_MAX;
 
             let shift_in_sine_res = 
