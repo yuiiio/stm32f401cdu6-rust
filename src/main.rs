@@ -136,12 +136,12 @@ fn main() -> ! {
             /* 望む回転方向が逆の場合反転して進ませる必要がある(-1して反転(-3?) */
             
             let now_hole_sensor_state: u16 = match m1_hole_sensor {
-                [false, false, false] => { 0 },
-                [true, false, false] => { 1 },
-                [true, true, false] => { 2 },
-                [true, true, true] => { 3 },
-                [false, true, true] => { 4 },
-                [false, false, true] => { 5 },
+                [false, false, false] => { 2 },
+                [true, false, false] => { 3 },
+                [true, true, false] => { 4 },
+                [true, true, true] => { 5 },
+                [false, true, true] => { 0 },
+                [false, false, true] => { 1 },
                 _ => {
                     /* NSN or SNS is invalid */
                     pre_hole_sensor_state
@@ -200,11 +200,40 @@ fn main() -> ! {
 
             /* test rotate without sensor */
             // 360 < 8bit, so can shift max 32-8 = 24
-            const SCALE: usize = 8; // <= 24
+            const SCALE: usize = 12; // <= 24
             const COUNTER_MAX: usize = (SINE_RESOLUTION << SCALE) - 1;
             const COUNTER_MAX_DIV6: usize = COUNTER_MAX / 6;
+            const COUNTER_MAX_DIV12: usize = COUNTER_MAX / 12;
 
             count_timer += 1;
+            
+            if count_timer % COUNTER_MAX_DIV6 == 0 {
+
+                let diff = if rotate_dir == true {
+                    req_bridge_state = (COUNTER_MAX_DIV6 * now_hole_sensor_state as usize) + COUNTER_MAX_DIV12;
+                    pre_debug_counter - debug_counter
+                } else {
+                    req_bridge_state = (COUNTER_MAX_DIV6 * (5 - now_hole_sensor_state as usize)) + COUNTER_MAX_DIV12;
+                    debug_counter - pre_debug_counter
+                };
+
+                if diff >= 1 {
+                    speed += 1;
+                    if speed >= 30 {
+                        speed = 30;
+                    }
+                } else {
+                    speed = speed.saturating_sub(1);
+                    //speed = speed >> 1;// / 2
+                    if speed == 0 {
+                        speed = 1;
+                    }
+                }
+
+                pre_debug_counter = debug_counter;
+            }
+
+            /*
             if count_timer % (COUNTER_MAX_DIV6 * 3) == 0 {
                 let diff = if rotate_dir == true {
                     pre_debug_counter - debug_counter
@@ -257,6 +286,7 @@ fn main() -> ! {
                 }
                 stop_counter = debug_counter;
             }
+            */
 
             //speed = 10;
 
